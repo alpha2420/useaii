@@ -1,0 +1,18 @@
+import { NextRequest, NextResponse } from "next/server";
+import { disconnectWhatsApp } from "@/lib/whatsapp";
+
+export async function POST(req: NextRequest) {
+    try {
+        const { ownerId } = await req.json();
+
+        if (!ownerId) {
+            return NextResponse.json({ error: "Missing ownerId" }, { status: 400 });
+        }
+
+        await disconnectWhatsApp(ownerId);
+        
+        return NextResponse.json({ success: true, message: "WhatsApp session cleared." });
+    } catch (e: any) {
+        return NextResponse.json({ error: e.message || "Failed to disconnect" }, { status: 500 });
+    }
+}
