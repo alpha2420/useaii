@@ -43,7 +43,7 @@ export default function LoginPage() {
             >
                 <div className="text-center mb-8">
                     <div className="text-2xl font-semibold tracking-tight cursor-pointer inline-block" onClick={() => router.push('/')}>
-                        Support <span className="text-zinc-400">AI</span>
+                        Use <span className="text-zinc-400">AI</span>
                     </div>
                 </div>
 

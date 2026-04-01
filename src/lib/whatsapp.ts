@@ -2,6 +2,7 @@ import { Client, LocalAuth } from 'whatsapp-web.js';
 import { GoogleGenAI } from "@google/genai";
 import connectDb from './db';
 import Settings from '@/model/settings.model';
+import UnansweredQuestion from '@/model/unanswered-question.model';
 import fs from 'fs';
 import path from 'path';
 
@@ -107,6 +108,15 @@ You may rephrase, summarize, or interpret the information if needed.
 Do NOT invent new policies, prices, or promises.
 Keep answers concise and conversational, suited for a WhatsApp text message.
 
+IMPORTANT: You must respond ONLY with valid JSON in the exact format below, with no extra text before or after:
+{
+  "canAnswer": true or false,
+  "reply": "your answer here"
+}
+
+Set "canAnswer" to true if the business information below contains enough detail to answer the question accurately.
+Set "canAnswer" to false if the question asks about something NOT covered at all in the business information. In this case, set "reply" to a polite message like: "I'm sorry, I don't have information about that right now. Your question has been noted and someone from our team will look into it."
+
 --------------------
 BUSINESS INFORMATION
 --------------------
@@ -118,7 +128,7 @@ CUSTOMER QUESTION
 ${msg.body}
 
 --------------------
-ANSWER
+JSON RESPONSE
 --------------------
 `;
 
@@ -128,8 +138,38 @@ ANSWER
                 contents: prompt,
             });
 
-            if (res.text) {
-                await msg.reply(res.text);
+            let reply = res.text || "Something went wrong.";
+            let canAnswer = true;
+
+            try {
+                let cleaned = reply.trim();
+                if (cleaned.startsWith("```")) {
+                    cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "").trim();
+                }
+                const parsed = JSON.parse(cleaned);
+                canAnswer = parsed.canAnswer !== false;
+                reply = parsed.reply || reply;
+            } catch {
+                // If JSON parsing fails, treat as answerable (fallback to raw text)
+                canAnswer = true;
+            }
+
+            // Store unanswered question
+            if (!canAnswer) {
+                try {
+                    await UnansweredQuestion.create({
+                        ownerId,
+                        question: msg.body,
+                        source: "whatsapp",
+                        status: "unanswered"
+                    });
+                } catch (dbErr) {
+                    console.error("[WhatsApp] Failed to store unanswered question:", dbErr);
+                }
+            }
+
+            if (reply) {
+                await msg.reply(reply);
             }
 
         } catch (error) {

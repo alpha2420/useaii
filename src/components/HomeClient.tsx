@@ -57,7 +57,7 @@ const navigate=useRouter()
                 className='fixed top-0 left-0 w-full z-50 bg-white/70 backdrop-blur-xl border-b border-zinc-200'
             >
                 <div className='max-w-7xl mx-auto px-6 h-16 flex items-center justify-between'>
-                    <div className='text-lg font-semibold tracking-tight'>Support <span className='text-zinc-400'>AI</span></div>
+                    <div className='text-lg font-semibold tracking-tight'>Use <span className='text-zinc-400'>AI</span></div>
                     {email ? <div className='relative' ref={popupRef}>
                         <button className='w-10 h-10 rounded-full
                   bg-black text-white
@@ -174,7 +174,7 @@ const navigate=useRouter()
                         transition={{ duration: 0.5 }}
                         className='text-3xl font-semibold text-center'
                     >
-                        Why Businesses Choose SupportAI
+                        Why Businesses Choose UseAI
                     </motion.h2>
 
                     <div className='mt-16 grid grid-cols-1 md:grid-cols-3 gap-10'>
@@ -201,7 +201,7 @@ const navigate=useRouter()
                 </div>
             </section>
             <footer className='py-10 text-center text-sm text-zinc-500'>
-                &copy; {new Date().getFullYear()} SupportAI. All rights reserved.
+                &copy; {new Date().getFullYear()} UseAI. All rights reserved.
             </footer>
         </div>
     )

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Support.ai",
+  title: "Use.ai",
   description: "the chatbot that you can embed in your website",
 };
 
