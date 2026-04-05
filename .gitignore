@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# WhatsApp session data (SENSITIVE - never commit these)
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Dev logs
+dev.log
