@@ -19,10 +19,11 @@ export async function POST(req:NextRequest) {
         )
         return NextResponse.json(settings)
     } catch (error) {
+        console.error("Settings API error:", error);
         return NextResponse.json(
-                {message:`settings error ${error}`},
-                {status:500}
-            )
+            { message: "An internal server error occurred while updating settings." },
+            { status: 500 }
+        );
     }
 }
 

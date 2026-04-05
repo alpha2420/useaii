@@ -5,6 +5,12 @@ import Settings from '@/model/settings.model';
 import UnansweredQuestion from '@/model/unanswered-question.model';
 import fs from 'fs';
 import path from 'path';
+import { env } from './env';
+
+// Ensure fetch is globally available for whatsapp-web.js
+if (typeof global.fetch === 'undefined') {
+    global.fetch = fetch; // Use built-in fetch if available (Node 18+)
+}
 
 // Global cache for WhatsApp clients to prevent zombie processes during hot reloads
 declare global {
@@ -17,6 +23,21 @@ if (!global.whatsappClients) {
     global.whatsappClients = new Map();
     global.whatsappQRs = new Map();
     global.whatsappReady = new Map();
+
+    // PRODUCTION: Global process listener to kill all browser instances on exit
+    const cleanupAll = async () => {
+        console.log('[WhatsApp] Global cleanup initiated. Closing all browser instances...');
+        for (const [ownerId, client] of global.whatsappClients.entries()) {
+            try {
+                await client.destroy();
+                console.log(`[WhatsApp] Destroyed client for ${ownerId}`);
+            } catch (e) {}
+        }
+        process.exit();
+    };
+
+    process.on('SIGINT', cleanupAll);
+    process.on('SIGTERM', cleanupAll);
 }
 
 export const getWhatsAppClient = (ownerId: string): Client => {
@@ -82,8 +103,8 @@ export const getWhatsAppClient = (ownerId: string): Client => {
 
     client.on('message', async (msg) => {
         try {
-            // Ignore status broadcasts and group messages
-            if (msg.isStatus || (await msg.getChat()).isGroup) return;
+            // Ignore status broadcasts, group messages, and self-messages
+            if (msg.fromMe || msg.isStatus || (await msg.getChat()).isGroup) return;
 
             await connectDb();
             const setting = await Settings.findOne({ ownerId });
@@ -132,11 +153,39 @@ JSON RESPONSE
 --------------------
 `;
 
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-            const res = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: prompt,
-            });
+            const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+            let res;
+            const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+            let lastError: any = null;
+
+            for (const modelName of modelsToTry) {
+                try {
+                    console.log(`[WhatsApp] Trying model: ${modelName} for owner ${ownerId}`);
+                    // Use models.generateContent with array payload
+                    res = await (ai as any).models.generateContent({
+                        model: modelName,
+                        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+                    });
+                    if (res) {
+                        console.log(`[WhatsApp] Success with model: ${modelName}`);
+                        break; 
+                    }
+                } catch (apiError: any) {
+                    lastError = apiError;
+                    console.error(`[WhatsApp] Model ${modelName} failed:`, apiError.status || apiError.message || apiError);
+                }
+            }
+
+            if (!res) {
+                console.error("[WhatsApp] All AI models failed for owner:", ownerId, lastError);
+                const errStr = String(lastError?.message || lastError || "");
+                if (lastError?.status === 429 || errStr.includes("429") || errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("quota")) {
+                    await msg.reply("Hi! We are experiencing high demand right now. Please try again in a few minutes. We apologize for the inconvenience! 🙏");
+                } else {
+                    await msg.reply("Hi! Our support assistant is temporarily unavailable. Please try again shortly or contact us directly. Thank you for your patience! 🙏");
+                }
+                return;
+            }
 
             let reply = res.text || "Something went wrong.";
             let canAnswer = true;

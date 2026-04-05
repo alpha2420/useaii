@@ -2,6 +2,8 @@ import connectDb from "@/lib/db";
 import UnansweredQuestion from "@/model/unanswered-question.model";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
     try {
         const ownerId = req.nextUrl.searchParams.get("ownerId");
@@ -19,8 +21,9 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json(questions);
     } catch (error) {
+        console.error("Unanswered questions API error:", error);
         return NextResponse.json(
-            { message: `Error fetching unanswered questions: ${error}` },
+            { message: "An internal server error occurred while fetching questions." },
             { status: 500 }
         );
     }

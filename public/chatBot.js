@@ -120,15 +120,19 @@ function addMessage(text,from){
     const bubble=document.createElement("div")
     bubble.innerHTML=text
     Object.assign(bubble.style,{
-         maxWidth: "78%",
-      padding: "8px 12px",
+      maxWidth: from === "user" ? "72%" : "80%",
+      padding: from === "user" ? "8px 12px" : "10px 14px",
       borderRadius: "14px",
-      fontSize: "13px",
-      lineHeight: "1.4",
-      marginBottom: "8px",
+      fontSize: "13.5px",
+      lineHeight: "1.6",
+      marginBottom: "10px",
       alignSelf: from === "user" ? "flex-end" : "flex-start",
-      background: from === "user" ? "#000" : "#e5e7eb",
-      color: from === "user" ? "#fff" : "#111",
+      background: from === "user" ? "#000" : "#fff",
+      color: from === "user" ? "#fff" : "#374151",
+      border: from === "user" ? "none" : "1px solid #e5e7eb",
+      boxShadow: from === "user" ? "none" : "0 1px 3px rgba(0,0,0,0.07)",
+      wordBreak: "break-word",
+      letterSpacing: "0.01em",
 
       /* bubble direction polish */
       borderTopRightRadius: from === "user" ? "4px" : "14px",

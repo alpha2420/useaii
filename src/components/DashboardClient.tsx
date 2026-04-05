@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from "motion/react"
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
+import QRCode from 'react-qr-code'
 
 interface UnansweredQ {
     _id: string;
@@ -39,6 +40,10 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
     const [submittingAnswer, setSubmittingAnswer] = useState(false)
     const [uqExpanded, setUqExpanded] = useState(true)
 
+    // WhatsApp Integration state
+    const [wsStatus, setWsStatus] = useState({ isReady: false, qrCode: null as string | null })
+    const [wsLoading, setWsLoading] = useState(false)
+
     const handleSettings = async () => {
         setLoading(true)
         try {
@@ -68,8 +73,44 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
             }
             handleGetDetails()
             fetchUnansweredQuestions()
+            // Initial poll for WhatsApp status
+            pollWhatsAppStatus()
         }
     }, [ownerId])
+
+    useEffect(() => {
+        if (!ownerId) return;
+        
+        const interval = setInterval(async () => {
+            if (!wsStatus.isReady) {
+                await pollWhatsAppStatus();
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [ownerId, wsStatus.isReady]);
+
+    const pollWhatsAppStatus = async () => {
+        try {
+            const res = await axios.post("/api/whatsapp/qr", { ownerId });
+            setWsStatus(res.data);
+        } catch (err) {
+            console.error("Failed to poll WhatsApp status", err);
+        }
+    };
+
+    const handleDisconnectWhatsApp = async () => {
+        if (!confirm("Are you sure you want to disconnect WhatsApp?")) return;
+        setWsLoading(true);
+        try {
+            await axios.post("/api/whatsapp/disconnect", { ownerId });
+            setWsStatus({ isReady: false, qrCode: null });
+        } catch (err) {
+            console.error("Failed to disconnect", err);
+        } finally {
+            setWsLoading(false);
+        }
+    };
 
     const fetchUnansweredQuestions = async () => {
         try {
@@ -252,6 +293,62 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
 
                     </motion.div>
 
+                    {/* WhatsApp Integration Panel */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.1 }}
+                        className='w-full bg-white rounded-2xl shadow-xl p-10 relative overflow-hidden'
+                    >
+                        <div className='absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full blur-3xl -mr-12 -mt-12'></div>
+                        <div className='flex items-center justify-between mb-8'>
+                            <div>
+                                <h1 className='text-xl font-semibold flex items-center gap-2'>
+                                    WhatsApp Integration
+                                    <span className={`w-2 h-2 rounded-full ${wsStatus.isReady ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`}></span>
+                                </h1>
+                                <p className='text-zinc-500 text-sm mt-1'>Connect your WhatsApp Business to use AI locally</p>
+                            </div>
+                            {wsStatus.isReady && (
+                                <button
+                                    onClick={handleDisconnectWhatsApp}
+                                    disabled={wsLoading}
+                                    className='text-xs font-bold text-red-500 hover:text-red-700 uppercase tracking-widest'
+                                >
+                                    {wsLoading ? "..." : "Disconnect"}
+                                </button>
+                            )}
+                        </div>
+
+                        {wsStatus.isReady ? (
+                            <div className='bg-emerald-50 border border-emerald-100 rounded-xl p-6 flex items-center gap-5'>
+                                <div className='w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xl shadow-lg shadow-emerald-600/20'>
+                                    ✓
+                                </div>
+                                <div>
+                                    <p className='font-bold text-emerald-900'>System Connected</p>
+                                    <p className='text-xs text-emerald-600 font-medium'>AI is now answering messages on {whatsappNumber || "your linked number"}</p>
+                                </div>
+                            </div>
+                        ) : wsStatus.qrCode ? (
+                            <div className='flex flex-col items-center text-center py-6'>
+                                <div className='bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm mb-6'>
+                                    <QRCode value={wsStatus.qrCode} size={200} viewBox={`0 0 256 256`} style={{ height: "auto", maxWidth: "100%", width: "100%" }} />
+                                </div>
+                                <h2 className='text-lg font-bold text-zinc-900'>Scan to Link</h2>
+                                <p className='text-sm text-zinc-500 max-w-xs mt-2'>Open WhatsApp on your phone → Settings → Linked Devices → Link a Device</p>
+                            </div>
+                        ) : (
+                            <div className='flex flex-col items-center py-10 transition-all'>
+                                <div className='w-14 h-14 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-center mb-5 animate-pulse'>
+                                    <span className='text-2xl'>💬</span>
+                                </div>
+                                <p className='text-sm font-medium text-zinc-600'>Starting WhatsApp Engine...</p>
+                                <p className='text-[10px] text-zinc-400 mt-2 uppercase tracking-widest'>Wait for 10-15 seconds</p>
+                            </div>
+                        )}
+                    </motion.div>
+
                     {/* Unanswered Questions Panel */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -408,10 +505,10 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                     <div className='flex-1 overflow-y-auto p-6 space-y-4 bg-zinc-50 flex flex-col'>
                         {chatHistory.map((msg, i) => (
                             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`text-sm px-4 py-3 rounded-2xl max-w-[85%] ${
+                                <div className={`text-sm px-4 py-3 rounded-2xl max-w-[75%] leading-relaxed break-words ${
                                     msg.role === 'user' 
                                         ? 'bg-black text-white rounded-br-sm' 
-                                        : 'bg-white border border-zinc-200 shadow-sm text-zinc-800 rounded-bl-sm'
+                                        : 'bg-white border border-zinc-200 shadow-sm text-zinc-700 rounded-bl-sm tracking-wide'
                                 }`}>
                                     {msg.content}
                                 </div>
