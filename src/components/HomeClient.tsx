@@ -4,7 +4,64 @@ import { AnimatePresence, motion } from "motion/react"
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { HeroLanding } from '@/components/ui/hero-1'
-import { Inbox, FileText, Timer, TriangleAlert, Zap, Target, Globe } from 'lucide-react'
+import { Inbox, FileText, Timer, TriangleAlert, Zap, Target, Globe, MessageCircle, MessageSquare, Smartphone, Check } from 'lucide-react'
+
+const featureSections = [
+    {
+        title: "Always-On Customer Support",
+        points: [
+            "Handles high volumes of queries 24/7",
+            "Eliminates wait times and missed leads",
+            "Frees human agents for complex issues"
+        ],
+        image: "/chat_mockup_1_1775460073772.png"
+    },
+    {
+        title: "Multilingual Conversations",
+        points: [
+            "Automatically detects customer language",
+            "Responds fluently and naturally",
+            "Improves global customer experience"
+        ],
+        image: "/chat_mockup_multilingual_1775460094640.png"
+    },
+    {
+        title: "Action-Driven AI Workflows",
+        points: [
+            "Understands real customer intent",
+            "Connects with your internal systems",
+            "Executes tasks, not just answers questions"
+        ],
+        image: "/workflow_mockup_1775460111614.png"
+    },
+    {
+        title: "Scale Without Expanding Your Team",
+        points: [
+            "Manages growing query volumes effortlessly",
+            "Reduces dependency on manual support",
+            "Maintains consistent service quality"
+        ],
+        image: "/chart_growth_1775460132037.png"
+    },
+    {
+        title: "Instant, No-Code Deployment",
+        points: [
+            "No APIs or technical setup required",
+            "Add your business information",
+            "Go live within minutes"
+        ],
+        image: "/deployment_hub_1775460149159.png"
+    },
+    {
+        title: "Continuous Learning & Improvement",
+        points: [
+            "Centralized conversation dashboard",
+            "Identify answered and unanswered queries",
+            "Train the AI to improve future responses"
+        ],
+        image: "/chart_analytics_1775460170434.png"
+    }
+];
 export default function HomeClient({ email }: { email: string }) {
     const [loading, setLoading] = useState(false)
     const navigate = useRouter()
@@ -259,88 +316,161 @@ export default function HomeClient({ email }: { email: string }) {
                 </div>
             </section>
 
-            {/* Zig Zag - Section 1 */}
-            <section className='py-24 px-6 max-w-6xl mx-auto'>
-                <div className='grid lg:grid-cols-2 gap-16 lg:gap-24 items-center'>
-                    <div>
-                        <div className='w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-blue-600/20'>
-                            <Timer className="w-6 h-6 text-white" />
+            {/* Platforms Selection Section */}
+            <section className='py-24 px-6 max-w-6xl mx-auto border-t border-zinc-100 mt-10'>
+                <div className='text-center mb-16'>
+                    <h2 className='text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900'>
+                        Platforms Where You Can Use UseAI
+                    </h2>
+                    <p className='text-zinc-500 mt-4 text-lg font-medium'>
+                        Seamlessly Integrate and automate across multiple platforms
+                    </p>
+                </div>
+
+                <div className='relative flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-0 lg:h-[600px]'>
+                    {/* Central Illustration */}
+                    <div className='relative z-10 w-full max-w-md lg:absolute lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 flex justify-center'>
+                        <div className='relative'>
+                            <div className='absolute -inset-4 bg-blue-50 rounded-full blur-3xl opacity-30 -z-10 animate-pulse'></div>
+                            <img 
+                                src="/platform_illustration.png" 
+                                alt="Platform Illustration" 
+                                className='w-full max-w-[400px] h-auto object-contain mix-blend-multiply'
+                            />
                         </div>
-                        <h2 className='text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 mb-6'>Always-On Customer Support</h2>
-                        <ul className='space-y-5 mb-10'>
-                            {[
-                                "Handles high volumes of queries 24/7",
-                                "Eliminates wait times and missed leads",
-                                "Frees human agents for complex issues"
-                            ].map((point, i) => (
-                                <li key={i} className='flex gap-4 text-zinc-600 font-medium'>
-                                    <div className='w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5'>
-                                        <Zap className="w-3.5 h-3.5" fill="currentColor" />
-                                    </div>
-                                    {point}
-                                </li>
-                            ))}
-                        </ul>
-                        {!email && <button onClick={handleLogin} className='px-8 py-4 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition shadow-xl shadow-blue-600/20'>Request a Demo</button>}
                     </div>
-                    <div className='bg-zinc-50 rounded-[3rem] p-8 lg:p-12 border border-zinc-200 relative overflow-hidden h-[500px] flex items-center justify-center shadow-inner'>
-                        <div className='absolute top-0 right-0 w-40 h-40 bg-blue-50 rounded-full blur-[80px] opacity-60'></div>
-                        {/* Mock Phone Graphic */}
-                        <div className='relative w-72 h-[450px] bg-zinc-900 border-[8px] border-zinc-800 rounded-[3rem] shadow-2xl p-4 overflow-hidden transform rotate-2 hover:rotate-0 transition-transform duration-500'>
-                            <div className='w-1/3 h-5 bg-zinc-800 absolute top-0 left-1/3 rounded-b-2xl z-20'></div>
-                            <div className='w-full h-full bg-white rounded-[2rem] relative p-3 pt-8'>
-                                <div className='flex flex-col gap-3'>
-                                    <div className='bg-zinc-100 text-zinc-800 p-3 rounded-2xl rounded-tl-none text-xs font-medium w-4/5'>Hi, how can I reset my password?</div>
-                                    <div className='bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none text-xs font-medium self-end w-4/5 shadow-md'>You can reset it by visiting app.use.ai/reset. Need help with anything else?</div>
-                                    <div className='bg-zinc-100 text-zinc-800 p-3 rounded-2xl rounded-tl-none text-xs font-medium w-1/2'>Thanks! 🚀</div>
-                                </div>
+
+                    {/* Feature Cards - Left Side */}
+                    <div className='flex flex-col gap-6 w-full lg:w-auto lg:absolute lg:left-0 lg:top-1/2 lg:-translate-y-1/2 lg:z-20'>
+                        {/* Website Card */}
+                        <motion.div 
+                            initial={{ opacity: 0, x: -50 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.5 }}
+                            viewport={{ once: true }}
+                            className='bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl transition-all duration-300 w-full lg:w-[260px] lg:-translate-y-8 lg:-translate-x-4 group cursor-default'
+                        >
+                            <div className='w-8 h-8 bg-zinc-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform'>
+                                <Globe className="w-4 h-4 text-zinc-900" />
                             </div>
-                        </div>
+                            <h3 className='font-bold text-base text-zinc-900 mb-2'>Website</h3>
+                            <p className='text-zinc-500 font-medium text-xs leading-relaxed'>
+                                Have your AI Agent provide live support over your website 24/7.
+                            </p>
+                        </motion.div>
+
+                        {/* WhatsApp Card */}
+                        <motion.div 
+                            initial={{ opacity: 0, x: -50 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            viewport={{ once: true }}
+                            className='bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl transition-all duration-300 w-full lg:w-[260px] lg:translate-x-8 lg:translate-y-8 group cursor-default'
+                        >
+                            <div className='w-8 h-8 bg-zinc-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform'>
+                                <MessageCircle className="w-4 h-4 text-zinc-900" />
+                            </div>
+                            <h3 className='font-bold text-base text-zinc-900 mb-2'>WhatsApp</h3>
+                            <p className='text-zinc-500 font-medium text-xs leading-relaxed'>
+                                Turn your mobile WhatsApp into a full-fledged AI chatbot that talks like you.
+                            </p>
+                        </motion.div>
+                    </div>
+
+                    {/* Feature Cards - Right Side */}
+                    <div className='flex flex-col gap-6 w-full lg:w-auto lg:absolute lg:right-0 lg:top-1/2 lg:-translate-y-1/2 lg:z-20'>
+                        {/* WhatsApp API Card */}
+                        <motion.div 
+                            initial={{ opacity: 0, x: 50 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.5 }}
+                            viewport={{ once: true }}
+                            className='bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl transition-all duration-300 w-full lg:w-[260px] lg:-translate-y-8 lg:translate-x-4 group cursor-default'
+                        >
+                            <div className='w-8 h-8 bg-zinc-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform'>
+                                <MessageSquare className="w-4 h-4 text-zinc-900" />
+                            </div>
+                            <h3 className='font-bold text-base text-zinc-900 mb-2'>WhatsApp API</h3>
+                            <p className='text-zinc-500 font-medium text-xs leading-relaxed'>
+                                Connect WhatsApp API, send campaigns, and let UseAI handle interested customer queries.
+                            </p>
+                        </motion.div>
+
+                        {/* Applications Card */}
+                        <motion.div 
+                            initial={{ opacity: 0, x: 50 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            viewport={{ once: true }}
+                            className='bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl transition-all duration-300 w-full lg:w-[260px] lg:-translate-x-8 lg:translate-y-8 group cursor-default self-end lg:self-auto'
+                        >
+                            <div className='w-8 h-8 bg-zinc-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform'>
+                                <Smartphone className="w-4 h-4 text-zinc-900" />
+                            </div>
+                            <h3 className='font-bold text-base text-zinc-900 mb-2'>Applications</h3>
+                            <p className='text-zinc-500 font-medium text-xs leading-relaxed'>
+                                Train UseAI and offer in-app support so customers get help without leaving.
+                            </p>
+                        </motion.div>
                     </div>
                 </div>
             </section>
 
-            {/* Zig Zag - Section 2 */}
+            {/* How Our Custom AI Chatbot Helps Business Section */}
             <section className='py-24 px-6 max-w-6xl mx-auto'>
-                <div className='grid lg:grid-cols-2 gap-16 lg:gap-24 items-center'>
-                    <div className='order-2 lg:order-1 bg-zinc-50 rounded-[3rem] p-8 lg:p-12 border border-zinc-200 relative overflow-hidden h-[500px] flex items-center justify-center shadow-inner'>
-                        <div className='absolute bottom-0 left-0 w-40 h-40 bg-emerald-50 rounded-full blur-[80px] opacity-60'></div>
-                        <div className='bg-white shadow-2xl rounded-3xl w-full h-[320px] border border-zinc-200 p-6 flex flex-col relative transform -rotate-2 hover:rotate-0 transition-transform duration-500'>
-                            <div className='flex items-center gap-3 border-b border-zinc-100 pb-4 mb-6'>
-                                <div className='w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-emerald-600/20'>AF</div>
-                                <div>
-                                    <p className='text-sm font-bold text-zinc-900'>Agarwal Fashion ✨</p>
-                                    <p className='text-[10px] text-emerald-600 font-bold'>OFFICIAL BUSINESS</p>
+                <div className='text-center mb-24'>
+                    <h2 className='text-4xl lg:text-5xl font-bold tracking-tight text-zinc-900'>
+                        How Our Custom AI Chatbot Helps Business
+                    </h2>
+                    <p className='text-zinc-500 mt-4 text-xg lg:text-lg font-medium'>
+                        Built to reduce workload, improve response time, and scale support effortlessly.
+                    </p>
+                </div>
+
+                <div className='flex flex-col gap-24 lg:gap-32'>
+                    {featureSections.map((section, index) => {
+                        const isEven = index % 2 === 0;
+                        return (
+                            <div key={index} className={`grid lg:grid-cols-2 gap-16 lg:gap-24 items-center`}>
+                                {/* Text Content */}
+                                <div className={`order-2 ${isEven ? 'lg:order-1' : 'lg:order-2'}`}>
+                                    <h3 className='text-3xl font-bold tracking-tight text-zinc-900 mb-6'>
+                                        {section.title}
+                                    </h3>
+                                    <ul className='space-y-4 mb-8'>
+                                        {section.points.map((point, i) => (
+                                            <li key={i} className='flex gap-3 text-sm lg:text-base text-zinc-600 font-medium items-center'>
+                                                <div className='w-5 h-5 rounded flex items-center justify-center shrink-0 bg-zinc-100 text-zinc-900'>
+                                                    <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                                                </div>
+                                                {point}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    {!email && (
+                                        <button onClick={handleLogin} className='px-6 py-3 rounded-xl bg-blue-600 text-sm text-white font-bold hover:bg-blue-700 transition'>
+                                            Request a Demo
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Graphic Content */}
+                                <div className={`order-1 ${isEven ? 'lg:order-2' : 'lg:order-1'} flex justify-center`}>
+                                    <div className='w-full max-w-lg bg-zinc-50 rounded-3xl p-6 lg:p-10 border border-zinc-100 flex items-center justify-center relative overflow-hidden'>
+                                        <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-50 rounded-full blur-[80px] opacity-60'></div>
+                                        <img 
+                                            src={section.image} 
+                                            alt={section.title} 
+                                            className='relative z-10 w-full h-auto object-contain drop-shadow-sm hover:-translate-y-1 transition-transform duration-500'
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                            <div className='flex flex-col gap-4'>
-                                <div className='bg-zinc-100 text-zinc-800 p-3 rounded-2xl rounded-tl-none text-sm font-medium w-3/4'>Hola! ¿Cómo estás hoy?</div>
-                                <div className='bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none text-sm font-medium self-end w-4/5 shadow-md'>¡Hola! Todo bien. ¿Deseas hacer un pedido de moda hoy?</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className='order-1 lg:order-2'>
-                        <div className='w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-emerald-600/20'>
-                            <Globe className="w-6 h-6 text-white" />
-                        </div>
-                        <h2 className='text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 mb-6'>Multilingual Conversations</h2>
-                        <ul className='space-y-5 mb-10'>
-                            {[
-                                "Automatically detects customer language",
-                                "Responds fluently and naturally in 50+ languages",
-                                "Improves global customer experience instantly"
-                            ].map((point, i) => (
-                                <li key={i} className='flex gap-4 text-zinc-600 font-medium'>
-                                    <div className='w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5'>
-                                        <Zap className="w-3.5 h-3.5" fill="currentColor" />
-                                    </div>
-                                    {point}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                        );
+                    })}
                 </div>
             </section>
+
 
             {/* Why Choose Grids */}
             <section className='py-24 px-6 max-w-5xl mx-auto border-t border-zinc-100 mt-10'>
