@@ -63,10 +63,12 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
             const handleGetDetails = async () => {
                 try {
                     const result = await axios.post("/api/settings/get", { ownerId })
-                    setBusinessName(result.data.businessName || "")
-                    setSupportEmail(result.data.supportEmail || "")
-                    setKnowledge(result.data.knowledge || "")
-                    setWhatsappNumber(result.data.whatsappNumber || "")
+                    if (result.data) {
+                        setBusinessName(result.data.businessName || "")
+                        setSupportEmail(result.data.supportEmail || "")
+                        setKnowledge(result.data.knowledge || "")
+                        setWhatsappNumber(result.data.whatsappNumber || "")
+                    }
                 } catch (error) {
                     console.log(error)
                 }
@@ -76,6 +78,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
             // Initial poll for WhatsApp status
             pollWhatsAppStatus()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ownerId])
 
     useEffect(() => {
@@ -88,6 +91,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         }, 5000);
 
         return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ownerId, wsStatus.isReady]);
 
     const pollWhatsAppStatus = async () => {
@@ -366,7 +370,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                 </div>
                                 <div className='text-left'>
                                     <h2 className='text-lg font-semibold text-zinc-900'>Unanswered Questions</h2>
-                                    <p className='text-xs text-zinc-400 mt-0.5'>Questions your bot couldn't answer from the knowledge base</p>
+                                    <p className='text-xs text-zinc-400 mt-0.5'>Questions your bot couldn&apos;t answer from the knowledge base</p>
                                 </div>
                                 {unansweredQuestions.length > 0 && (
                                     <span className='ml-2 px-2.5 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full'>
@@ -414,7 +418,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                                     >
                                                         <div className='flex items-start justify-between gap-3'>
                                                             <div className='flex-1 min-w-0'>
-                                                                <p className='text-sm font-medium text-zinc-800 leading-relaxed'>"{q.question}"</p>
+                                                                <p className='text-sm font-medium text-zinc-800 leading-relaxed'>&quot;{q.question}&quot;</p>
                                                                 <div className='flex items-center gap-2 mt-2'>
                                                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
                                                                         q.source === "whatsapp" 

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect } from 'react';
 
 export default function Error({
@@ -21,7 +22,7 @@ export default function Error({
         </div>
         <h1 className="text-3xl font-bold text-zinc-900 tracking-tight mb-4">Something went wrong</h1>
         <p className="text-zinc-500 font-medium mb-10 leading-relaxed">
-          We encountered an unexpected error. Don't worry, our team has been notified.
+          We encountered an unexpected error. Don&apos;t worry, our team has been notified.
         </p>
         <div className="flex flex-col gap-4">
           <button
@@ -30,12 +31,12 @@ export default function Error({
           >
             Try again
           </button>
-          <a
+          <Link
             href="/"
             className="w-full py-4 rounded-xl bg-white border border-zinc-200 text-zinc-900 font-bold text-lg hover:bg-zinc-50 transition"
           >
             Go Home
-          </a>
+          </Link>
         </div>
       </div>
     </div>

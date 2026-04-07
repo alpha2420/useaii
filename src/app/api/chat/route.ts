@@ -111,13 +111,15 @@ JSON RESPONSE
 `;
 
         const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-        let res;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let res: any;
         const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
-        let lastError: any = null;
+        let lastError: unknown = null;
 
         for (const modelName of modelsToTry) {
             try {
                 console.log(`[Chat] Trying model: ${modelName} for owner ${ownerId}`);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 res = await (ai as any).models.generateContent({
                     model: modelName,
                     contents: [{ role: 'user', parts: [{ text: prompt }] }]
@@ -126,9 +128,10 @@ JSON RESPONSE
                     console.log(`[Chat] Success with model: ${modelName}`);
                     break;
                 }
-            } catch (apiError: any) {
+            } catch (apiError: unknown) {
                 lastError = apiError;
-                console.error(`[Chat] Model ${modelName} failed:`, apiError.status || apiError.message || apiError);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                console.error(`[Chat] Model ${modelName} failed:`, (apiError as any)?.status || (apiError as any)?.message || apiError);
             }
         }
 

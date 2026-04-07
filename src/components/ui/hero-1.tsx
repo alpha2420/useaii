@@ -87,7 +87,6 @@ export function HeroLanding(props: HeroLandingProps) {
     announcementBanner,
     callToActions,
     titleSize,
-    gradientColors,
     className
   } = { ...defaultProps, ...props }
 
@@ -139,6 +138,7 @@ export function HeroLanding(props: HeroLandingProps) {
             <a href="#" className="-m-1.5 p-1.5 flex items-center gap-1 cursor-pointer">
               <span className="sr-only">{logo?.companyName}</span>
               {logo?.src ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img alt={logo?.alt} src={logo?.src} className="h-6 sm:h-8 w-auto" />
               ) : (
                   <div className="text-xl font-bold tracking-tight">
@@ -180,6 +180,7 @@ export function HeroLanding(props: HeroLandingProps) {
               <a href="#" className="-m-1.5 p-1.5 flex items-center gap-1 cursor-pointer">
                 <span className="sr-only">{logo?.companyName}</span>
                 {logo?.src ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img alt={logo?.alt} src={logo?.src} className="h-6 sm:h-8 w-auto" />
                 ) : (
                     <div className="text-xl font-bold tracking-tight">

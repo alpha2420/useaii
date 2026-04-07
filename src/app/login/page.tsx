@@ -28,8 +28,14 @@ export default function LoginPage() {
             }
             router.push('/dashboard')
             router.refresh()
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Something went wrong')
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || 'Something went wrong')
+            } else if (err instanceof Error) {
+                setError(err.message)
+            } else {
+                setError('Something went wrong')
+            }
             setLoading(false)
         }
     }

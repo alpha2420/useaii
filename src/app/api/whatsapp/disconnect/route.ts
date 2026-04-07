@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
         await disconnectWhatsApp(ownerId);
         
         return NextResponse.json({ success: true, message: "WhatsApp session cleared." });
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message || "Failed to disconnect" }, { status: 500 });
+    } catch (e: unknown) {
+        return NextResponse.json({ error: (e as Error).message || "Failed to disconnect" }, { status: 500 });
     }
 }

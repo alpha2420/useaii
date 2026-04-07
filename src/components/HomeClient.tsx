@@ -1,6 +1,6 @@
 'use client'
-import React, { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from "motion/react"
+import React, { useState } from 'react'
+import { motion } from "motion/react"
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { HeroLanding } from '@/components/ui/hero-1'
@@ -71,10 +71,6 @@ export default function HomeClient({ email }: { email: string }) {
         navigate.push("/login")
     }
     
-    const firstLetter = email ? email[0].toUpperCase() : ""
-    const [open, setOpen] = useState(false)
-    const popupRef = useRef<HTMLDivElement>(null)
-
     // Review Form State
     const [rating, setRating] = useState(0)
     const [feedback, setFeedback] = useState("")
@@ -96,23 +92,6 @@ export default function HomeClient({ email }: { email: string }) {
         }
     }
 
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (popupRef.current && !popupRef.current.contains(e.target as Node)) setOpen(false)
-        }
-        document.addEventListener("mousedown", handler)
-        return () => document.removeEventListener("mousedown", handler)
-    }, [])
-
-    const handleLogOut = async () => {
-        try {
-            await axios.get("/api/auth/logout")
-            window.location.href = "/"
-        } catch (error) {
-            console.log(error)
-        }
-    }
-
     return (
         <div className='min-h-screen bg-[#fafafa] text-zinc-900 font-sans overflow-x-hidden selection:bg-blue-200 selection:text-blue-900'>
             {/* Hero Section */}
@@ -124,7 +103,7 @@ export default function HomeClient({ email }: { email: string }) {
                 }}
                 navigation={[
                     { name: 'Features', href: '#features' },
-                    { name: 'Pricing', href: '#pricing' },
+                    { name: 'Roadmap', href: '/roadmap' },
                     { name: 'Reviews', href: '#reviews' },
                 ]}
                 loginText={email ? "Dashboard" : "Log in"}
@@ -249,7 +228,7 @@ export default function HomeClient({ email }: { email: string }) {
             <section className='py-24 px-6 max-w-4xl mx-auto'>
                 <div className='text-center mb-16'>
                     <h2 className='text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900'>What is UseAI Custom AI Chatbot?</h2>
-                    <p className='text-zinc-500 mt-4 text-lg font-medium'>You're probably stuck in the following:</p>
+                    <p className='text-zinc-500 mt-4 text-lg font-medium'>You&apos;re probably stuck in the following:</p>
                 </div>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                     {[
@@ -332,6 +311,7 @@ export default function HomeClient({ email }: { email: string }) {
                     <div className='relative z-10 w-full max-w-md lg:absolute lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 flex justify-center'>
                         <div className='relative'>
                             <div className='absolute -inset-4 bg-blue-50 rounded-full blur-3xl opacity-30 -z-10 animate-pulse'></div>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img 
                                 src="/platform_illustration.png" 
                                 alt="Platform Illustration" 
@@ -458,6 +438,7 @@ export default function HomeClient({ email }: { email: string }) {
                                 <div className={`order-1 ${isEven ? 'lg:order-2' : 'lg:order-1'} flex justify-center`}>
                                     <div className='w-full max-w-lg bg-zinc-50 rounded-3xl p-6 lg:p-10 border border-zinc-100 flex items-center justify-center relative overflow-hidden'>
                                         <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-50 rounded-full blur-[80px] opacity-60'></div>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img 
                                             src={section.image} 
                                             alt={section.title} 
@@ -499,7 +480,7 @@ export default function HomeClient({ email }: { email: string }) {
                 </div>
             </section>
 
-            {/* CTA Banner */}
+
             <section className='py-24 px-6 max-w-6xl mx-auto'>
                 <div className='bg-zinc-900 rounded-[3rem] p-12 lg:p-20 text-center text-white relative overflow-hidden shadow-2xl'>
                     <div className='absolute top-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[120px] opacity-20 -mr-20 -mt-20'></div>
@@ -524,7 +505,7 @@ export default function HomeClient({ email }: { email: string }) {
             <section className='py-24 px-6 max-w-3xl mx-auto'>
                 <div className='bg-white border border-zinc-200 rounded-[2rem] p-10 shadow-xl'>
                     <h2 className='text-2xl font-bold text-center mb-2'>Help Us Improve</h2>
-                    <p className='text-zinc-500 text-sm text-center mb-10'>Rate us and tell us what to add or what's not working!</p>
+                    <p className='text-zinc-500 text-sm text-center mb-10'>Rate us and tell us what to add or what&apos;s not working!</p>
                     
                     {reviewSuccess ? (
                         <div className='text-center py-10 bg-green-50 rounded-2xl border border-green-100'>

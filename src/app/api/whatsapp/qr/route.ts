@@ -11,15 +11,15 @@ export async function POST(req: NextRequest) {
 
         // Initialize client if not already running (this is asynchronous)
         // If it's already running, it just returns the cached instance
-        getWhatsAppClient(ownerId);
+        await getWhatsAppClient(ownerId);
         
         // Immediately return current known status from global cache
         // The frontend should poll this endpoint every 3-5 seconds to catch updates
-        const status = getWhatsAppStatus(ownerId);
+        const status = await getWhatsAppStatus(ownerId);
 
         return NextResponse.json(status);
 
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return NextResponse.json({ error: (error as Error).message || "Unknown error" }, { status: 500 });
     }
 }

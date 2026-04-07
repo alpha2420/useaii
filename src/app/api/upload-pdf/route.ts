@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-// @ts-ignore
-const PDFParser = require("pdf2json");
+import PDFParser from "pdf2json";
 
 export async function POST(req: NextRequest) {
     try {
@@ -15,8 +14,9 @@ export async function POST(req: NextRequest) {
         const buffer = Buffer.from(arrayBuffer);
 
         return new Promise<NextResponse>((resolve) => {
-            const pdfParser = new PDFParser(null, 1);
+            const pdfParser = new PDFParser(null, true);
             
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             pdfParser.on("pdfParser_dataError", (errData: any) => {
                 console.error("PDF Parsing error:", errData.parserError);
                 resolve(NextResponse.json({ error: "Failed to parse PDF document" }, { status: 500 }));
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
             pdfParser.parseBuffer(buffer);
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("PDF Route error:", error);
         return NextResponse.json({ error: "Failed to process PDF upload" }, { status: 500 });
     }
