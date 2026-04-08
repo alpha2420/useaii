@@ -3,6 +3,7 @@ import { Client, RemoteAuth } from 'whatsapp-web.js';
 import { MongoStore } from 'wwebjs-mongo';
 import mongoose from 'mongoose';
 import { GoogleGenAI } from "@google/genai";
+import OpenAI from 'openai';
 import connectDb from './src/lib/db';
 import Settings from './src/model/settings.model';
 import WhatsappStatus from './src/model/whatsapp-status.model';
@@ -25,7 +26,7 @@ async function initWorker() {
     console.log("[Worker] MongoDB Connected & MongoStore initialized.");
 
     // Primary Loop: Check for users who need a connection
-    setInterval(pollUsers, 10000); // 10 seconds
+    setInterval(pollUsers, 5000); // 5 seconds
     pollUsers(); // Initial poll
 }
 
@@ -58,12 +59,14 @@ async function pollUsers() {
                 activeClients.delete(ownerId);
             }
             try {
-                await mongoose.connection.collection('whatsapp-RemoteAuth-' + ownerId).drop();
-            } catch (err: unknown) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                if ((err as any).code !== 26) {
-                    console.error(`[Worker] Failed dropping RemoteAuth for ${ownerId}:`, err);
+                const collectionName = 'whatsapp-RemoteAuth-' + ownerId;
+                const collections = await mongoose.connection.db?.listCollections({ name: collectionName }).toArray();
+                if (collections && collections.length > 0) {
+                    await mongoose.connection.collection(collectionName).drop();
+                    console.log(`[Worker] Dropped RemoteAuth collection for ${ownerId}`);
                 }
+            } catch (err: unknown) {
+                console.error(`[Worker] Failed dropping RemoteAuth for ${ownerId}:`, err);
             }
             await WhatsappStatus.deleteOne({ ownerId });
             console.log(`[Worker] Disconnected ${ownerId}`);
@@ -184,44 +187,80 @@ JSON RESPONSE
 --------------------
 `;
 
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let res: any;
-            const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
-            let lastError: unknown = null;
+            let reply = "";
+            let canAnswer = true;
+            let aiSuccess = false;
 
-            for (const modelName of modelsToTry) {
+            // --- 1. Try OpenAI (Primary) ---
+            const openaiKey = process.env.OPENAI_API_KEY;
+            if (openaiKey && openaiKey !== "your_openai_api_key_here") {
                 try {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    res = await (ai as any).models.generateContent({
-                        model: modelName,
-                        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+                    console.log(`[Worker] Trying OpenAI (gpt-4o-mini) for ${ownerId}`);
+                    const openai = new OpenAI({ apiKey: openaiKey });
+                    const completion = await openai.chat.completions.create({
+                        model: "gpt-4o-mini",
+                        messages: [{ role: 'user', content: prompt }],
+                        response_format: { type: 'json_object' }
                     });
-                    if (res) break; 
-                } catch (apiError: unknown) {
-                    lastError = apiError;
+                    const content = completion.choices[0].message.content;
+                    if (content) {
+                        const parsed = JSON.parse(content);
+                        canAnswer = parsed.canAnswer !== false;
+                        reply = parsed.reply || "";
+                        aiSuccess = true;
+                        console.log(`[Worker] Success with OpenAI for ${ownerId}`);
+                    }
+                } catch (openaiError: unknown) {
+                    console.error(`[Worker] OpenAI failed for ${ownerId}:`, (openaiError as any)?.message || openaiError);
                 }
             }
 
-            if (!res) {
-                console.error(`[Worker] All AI models failed for ${ownerId}`, lastError);
+            // --- 2. Fallback to Gemini ---
+            if (!aiSuccess) {
+                const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
+                const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+                let lastError: unknown = null;
+                let geminiRes: any = null;
+
+                for (const modelName of modelsToTry) {
+                    try {
+                        console.log(`[Worker] Trying Gemini model: ${modelName} for ${ownerId}`);
+                        geminiRes = await (ai as any).models.generateContent({
+                            model: modelName,
+                            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+                        });
+                        if (geminiRes) {
+                            console.log(`[Worker] Success with Gemini model: ${modelName} for ${ownerId}`);
+                            break; 
+                        }
+                    } catch (apiError: unknown) {
+                        lastError = apiError;
+                        console.error(`[Worker] Gemini model ${modelName} failed for ${ownerId}:`, (apiError as any)?.status || (apiError as any)?.message || apiError);
+                    }
+                }
+
+                if (geminiRes) {
+                    const rawReply = geminiRes.text || "Something went wrong.";
+                    try {
+                        let cleaned = rawReply.trim();
+                        if (cleaned.startsWith("```")) {
+                            cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "").trim();
+                        }
+                        const parsed = JSON.parse(cleaned);
+                        canAnswer = parsed.canAnswer !== false;
+                        reply = parsed.reply || rawReply;
+                    } catch {
+                        canAnswer = true;
+                        reply = rawReply;
+                    }
+                    aiSuccess = true;
+                }
+            }
+
+            if (!aiSuccess) {
+                console.error(`[Worker] All AI models failed for ${ownerId}`);
                 await msg.reply("Hi! Our support assistant is temporarily unavailable. Please try again shortly. 🙏");
                 return;
-            }
-
-            let reply = res.text || "Something went wrong.";
-            let canAnswer = true;
-
-            try {
-                let cleaned = reply.trim();
-                if (cleaned.startsWith("\`\`\`")) {
-                    cleaned = cleaned.replace(/^\`\`\`(?:json)?\s*/, "").replace(/\`\`\`\s*$/, "").trim();
-                }
-                const parsed = JSON.parse(cleaned);
-                canAnswer = parsed.canAnswer !== false;
-                reply = parsed.reply || reply;
-            } catch {
-                canAnswer = true;
             }
 
             if (!canAnswer) {
@@ -266,5 +305,13 @@ const cleanup = async () => {
 
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
+
+// Prevent whatsapp-web.js RemoteAuth crashes from killing the worker
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
 
 initWorker().catch(e => console.error("Worker failed to start:", e));

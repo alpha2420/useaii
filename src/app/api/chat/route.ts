@@ -2,6 +2,7 @@ import connectDb from "@/lib/db";
 import Settings from "@/model/settings.model";
 import UnansweredQuestion from "@/model/unanswered-question.model";
 import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { Ratelimit } from "@upstash/ratelimit";
@@ -110,54 +111,80 @@ JSON RESPONSE
 --------------------
 `;
 
-        const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let res: any;
-        const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
-        let lastError: unknown = null;
-
-        for (const modelName of modelsToTry) {
-            try {
-                console.log(`[Chat] Trying model: ${modelName} for owner ${ownerId}`);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                res = await (ai as any).models.generateContent({
-                    model: modelName,
-                    contents: [{ role: 'user', parts: [{ text: prompt }] }]
-                });
-                if (res) {
-                    console.log(`[Chat] Success with model: ${modelName}`);
-                    break;
-                }
-            } catch (apiError: unknown) {
-                lastError = apiError;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                console.error(`[Chat] Model ${modelName} failed:`, (apiError as any)?.status || (apiError as any)?.message || apiError);
-            }
-        }
-
-        if (!res) {
-            console.error("[Chat] All AI models failed for owner:", ownerId, lastError);
-            return NextResponse.json(
-                { message: "The AI service is temporarily overloaded. Please try again in 1-2 minutes." },
-                { status: 503 }
-            );
-        }
-
-        let reply = res.text || "Something went wrong.";
+        let reply = "";
         let canAnswer = true;
+        let aiSuccess = false;
 
-        try {
-            // Clean markdown code fences if present
-            let cleaned = reply.trim();
-            if (cleaned.startsWith("```")) {
-                cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "").trim();
+        // --- 1. Try OpenAI (Primary) ---
+        if (env.OPENAI_API_KEY && env.OPENAI_API_KEY !== "your_openai_api_key_here") {
+            try {
+                console.log(`[Chat] Trying OpenAI (gpt-4o-mini) for owner ${ownerId}`);
+                const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-4o-mini",
+                    messages: [{ role: "user", content: prompt }],
+                    response_format: { type: "json_object" },
+                });
+
+                const content = completion.choices[0].message.content;
+                if (content) {
+                    const parsed = JSON.parse(content);
+                    canAnswer = parsed.canAnswer !== false;
+                    reply = parsed.reply || "";
+                    aiSuccess = true;
+                    console.log(`[Chat] Success with OpenAI`);
+                }
+            } catch (openaiError: unknown) {
+                console.error(`[Chat] OpenAI failed:`, (openaiError as any)?.message || openaiError);
             }
-            const parsed = JSON.parse(cleaned);
-            canAnswer = parsed.canAnswer !== false;
-            reply = parsed.reply || reply;
-        } catch {
-            // If JSON parsing fails, treat as answerable (fallback to raw text)
-            canAnswer = true;
+        }
+
+        // --- 2. Fallback to Gemini ---
+        if (!aiSuccess) {
+            const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+            const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+            let lastError: unknown = null;
+            let geminiRes: any = null;
+
+            for (const modelName of modelsToTry) {
+                try {
+                    console.log(`[Chat] Trying Gemini model: ${modelName} for owner ${ownerId}`);
+                    geminiRes = await (ai as any).models.generateContent({
+                        model: modelName,
+                        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+                    });
+                    if (geminiRes) {
+                        console.log(`[Chat] Success with Gemini model: ${modelName}`);
+                        break;
+                    }
+                } catch (apiError: unknown) {
+                    lastError = apiError;
+                    console.error(`[Chat] Gemini model ${modelName} failed:`, (apiError as any)?.status || (apiError as any)?.message || apiError);
+                }
+            }
+
+            if (geminiRes) {
+                const rawReply = geminiRes.text || "Something went wrong.";
+                try {
+                    let cleaned = rawReply.trim();
+                    if (cleaned.startsWith("```")) {
+                        cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "").trim();
+                    }
+                    const parsed = JSON.parse(cleaned);
+                    canAnswer = parsed.canAnswer !== false;
+                    reply = parsed.reply || rawReply;
+                } catch {
+                    canAnswer = true;
+                    reply = rawReply;
+                }
+                aiSuccess = true;
+            } else {
+                console.error("[Chat] All AI models (OpenAI & Gemini) failed for owner:", ownerId, lastError);
+                return NextResponse.json(
+                    { message: "The AI service is temporarily overloaded. Please try again in 1-2 minutes." },
+                    { status: 503 }
+                );
+            }
         }
 
         // If the AI couldn't answer, store as unanswered

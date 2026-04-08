@@ -4,6 +4,14 @@ import { motion, AnimatePresence } from "motion/react"
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import QRCode from 'react-qr-code'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 
 interface UnansweredQ {
     _id: string;
@@ -41,8 +49,9 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
     const [uqExpanded, setUqExpanded] = useState(true)
 
     // WhatsApp Integration state
-    const [wsStatus, setWsStatus] = useState({ isReady: false, qrCode: null as string | null })
+    const [wsStatus, setWsStatus] = useState({ isReady: false, qrCode: null as string | null, disconnecting: false })
     const [wsLoading, setWsLoading] = useState(false)
+    const [isDisconnectDialogOpen, setIsDisconnectDialogOpen] = useState(false)
 
     const handleSettings = async () => {
         setLoading(true)
@@ -85,6 +94,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         if (!ownerId) return;
         
         const interval = setInterval(async () => {
+            // Poll when: waiting for QR, or disconnecting (to detect when it's done)
             if (!wsStatus.isReady) {
                 await pollWhatsAppStatus();
             }
@@ -97,18 +107,34 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
     const pollWhatsAppStatus = async () => {
         try {
             const res = await axios.post("/api/whatsapp/qr", { ownerId });
-            setWsStatus(res.data);
+            setWsStatus(prev => ({
+                isReady: res.data.isReady,
+                qrCode: res.data.qrCode,
+                disconnecting: res.data.disconnecting ?? false,
+            }));
         } catch (err) {
             console.error("Failed to poll WhatsApp status", err);
         }
     };
 
+    const handleConnectWhatsApp = async () => {
+        setWsLoading(true);
+        try {
+            await axios.post("/api/whatsapp/connect", { ownerId });
+            setWsStatus({ isReady: false, qrCode: null, disconnecting: false });
+        } catch (err) {
+            console.error("Failed to connect", err);
+        } finally {
+            setWsLoading(false);
+        }
+    };
+
     const handleDisconnectWhatsApp = async () => {
-        if (!confirm("Are you sure you want to disconnect WhatsApp?")) return;
+        setIsDisconnectDialogOpen(false);
         setWsLoading(true);
         try {
             await axios.post("/api/whatsapp/disconnect", { ownerId });
-            setWsStatus({ isReady: false, qrCode: null });
+            setWsStatus({ isReady: false, qrCode: null, disconnecting: true });
         } catch (err) {
             console.error("Failed to disconnect", err);
         } finally {
@@ -315,7 +341,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                             </div>
                             {wsStatus.isReady && (
                                 <button
-                                    onClick={handleDisconnectWhatsApp}
+                                    onClick={() => setIsDisconnectDialogOpen(true)}
                                     disabled={wsLoading}
                                     className='text-xs font-bold text-red-500 hover:text-red-700 uppercase tracking-widest'
                                 >
@@ -334,6 +360,14 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                     <p className='text-xs text-emerald-600 font-medium'>AI is now answering messages on {whatsappNumber || "your linked number"}</p>
                                 </div>
                             </div>
+                        ) : wsStatus.disconnecting ? (
+                            <div className='flex flex-col items-center py-10'>
+                                <div className='w-14 h-14 bg-red-50 border border-red-100 rounded-2xl flex items-center justify-center mb-5 animate-pulse'>
+                                    <span className='text-2xl'>🔌</span>
+                                </div>
+                                <p className='text-sm font-medium text-zinc-600'>Disconnecting...</p>
+                                <p className='text-[10px] text-zinc-400 mt-2 uppercase tracking-widest'>Please wait a moment</p>
+                            </div>
                         ) : wsStatus.qrCode ? (
                             <div className='flex flex-col items-center text-center py-6'>
                                 <div className='bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm mb-6'>
@@ -344,11 +378,20 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                             </div>
                         ) : (
                             <div className='flex flex-col items-center py-10 transition-all'>
-                                <div className='w-14 h-14 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-center mb-5 animate-pulse'>
+                                <div className='w-14 h-14 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-center mb-5'>
                                     <span className='text-2xl'>💬</span>
                                 </div>
-                                <p className='text-sm font-medium text-zinc-600'>Starting WhatsApp Engine...</p>
-                                <p className='text-[10px] text-zinc-400 mt-2 uppercase tracking-widest'>Wait for 10-15 seconds</p>
+                                <p className='text-sm font-medium text-zinc-700 mb-1'>Not Connected</p>
+                                <p className='text-xs text-zinc-400 mb-6'>Connect your WhatsApp to start answering customer messages automatically.</p>
+                                <motion.button
+                                    whileHover={{ scale: 1.03 }}
+                                    whileTap={{ scale: 0.97 }}
+                                    disabled={wsLoading}
+                                    onClick={handleConnectWhatsApp}
+                                    className='px-6 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition disabled:opacity-60'
+                                >
+                                    {wsLoading ? 'Connecting...' : '🔗 Connect WhatsApp'}
+                                </motion.button>
                             </div>
                         )}
                     </motion.div>
@@ -549,6 +592,30 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                 </motion.div>
             </div>
 
+            <Dialog open={isDisconnectDialogOpen} onOpenChange={setIsDisconnectDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Disconnect WhatsApp?</DialogTitle>
+                        <DialogDescription>
+                            This will stop the AI from answering messages on your linked number. You will need to scan the QR code to reconnect.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex sm:justify-end gap-3 mt-4">
+                        <button
+                            onClick={() => setIsDisconnectDialogOpen(false)}
+                            className="px-4 py-2 rounded-lg border border-zinc-200 text-sm font-medium hover:bg-zinc-50 transition"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleDisconnectWhatsApp}
+                            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
+                        >
+                            Disconnect Now
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

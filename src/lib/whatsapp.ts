@@ -13,9 +13,6 @@ export const getWhatsAppClient = async (ownerId: string) => {
             qrCode: null,
             disconnectRequested: false
         });
-    } else if (existing.disconnectRequested) {
-        existing.disconnectRequested = false;
-        await existing.save();
     }
     
     return null; // The worker process handles the actual client logic
@@ -26,7 +23,7 @@ export const getWhatsAppStatus = async (ownerId: string) => {
     await connectDb();
     
     const status = await WhatsappStatus.findOne({ ownerId });
-    if (!status) {
+    if (!status || status.disconnectRequested) {
         return { isReady: false, qrCode: null };
     }
     
