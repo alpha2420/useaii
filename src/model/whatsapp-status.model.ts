@@ -6,6 +6,12 @@ export interface IWhatsappStatus extends Document {
     qrCode: string | null;
     disconnectRequested: boolean;
     lastPing: Date; // The worker updates this to signal it is alive
+    providerStatus?: {
+        openai?: { error: string; updatedAt: Date };
+        gemini?: { error: string; updatedAt: Date };
+        grok?: { error: string; updatedAt: Date };
+        groq?: { error: string; updatedAt: Date };
+    };
     createdAt: Date;
     updatedAt: Date;
 }
@@ -31,6 +37,12 @@ const WhatsappStatusSchema: Schema<IWhatsappStatus> = new Schema({
     lastPing: {
         type: Date,
         default: Date.now
+    },
+    providerStatus: {
+        openai: { error: String, updatedAt: Date },
+        gemini: { error: String, updatedAt: Date },
+        grok: { error: String, updatedAt: Date },
+        groq: { error: String, updatedAt: Date }
     }
 }, {
     timestamps: true

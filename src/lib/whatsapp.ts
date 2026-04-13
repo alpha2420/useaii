@@ -29,7 +29,8 @@ export const getWhatsAppStatus = async (ownerId: string) => {
     
     return {
         isReady: status.isReady,
-        qrCode: status.qrCode
+        qrCode: status.qrCode,
+        providerStatus: status.providerStatus
     };
 };
 

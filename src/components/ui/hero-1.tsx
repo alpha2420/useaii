@@ -6,7 +6,8 @@ import { Menu, X } from 'lucide-react'
 
 interface NavigationItem {
   name: string
-  href: string
+  href?: string
+  dropdown?: { title: string; desc: string; href: string }[]
 }
 
 interface AnnouncementBanner {
@@ -91,6 +92,7 @@ export function HeroLanding(props: HeroLandingProps) {
   } = { ...defaultProps, ...props }
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
   const getTitleSizeClasses = () => {
     switch (titleSize) {
@@ -160,9 +162,39 @@ export function HeroLanding(props: HeroLandingProps) {
           {navigation && navigation.length > 0 && (
             <div className="hidden lg:flex lg:gap-x-8 xl:gap-x-12">
               {navigation.map((item) => (
-                <a key={item.name} href={item.href} className="text-sm/6 font-semibold text-zinc-900 hover:text-zinc-500 transition-colors">
-                  {item.name}
-                </a>
+                <div key={item.name} className="relative">
+                  {item.dropdown ? (
+                    <>
+                      <button 
+                        onClick={() => setOpenDropdown(openDropdown === item.name ? null : item.name)}
+                        className="flex items-center gap-1 text-sm/6 font-semibold text-zinc-900 hover:text-zinc-500 transition-colors py-2 outline-none"
+                      >
+                        {item.name}
+                        <svg className={`w-4 h-4 text-zinc-400 transition-transform ${openDropdown === item.name ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {openDropdown === item.name && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+                          <div className="absolute top-full left-0 mt-0 w-80 rounded-2xl bg-white p-4 shadow-xl ring-1 ring-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-200">
+                            {item.dropdown.map((drop) => (
+                              <a key={drop.title} href={drop.href} onClick={() => setOpenDropdown(null)} className="block p-3 rounded-xl hover:bg-zinc-50 transition-colors relative z-50">
+                                <p className="font-semibold text-zinc-900 text-sm">{drop.title}</p>
+                                <p className="text-zinc-500 text-xs mt-0.5 font-medium">{drop.desc}</p>
+                              </a>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <a href={item.href} className="flex items-center text-sm/6 font-semibold text-zinc-900 hover:text-zinc-500 transition-colors py-2">
+                      {item.name}
+                    </a>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -202,13 +234,29 @@ export function HeroLanding(props: HeroLandingProps) {
                 {navigation && navigation.length > 0 && (
                   <div className="space-y-2 py-6">
                     {navigation.map((item) => (
-                      <a
-                        key={item.name}
-                        href={item.href}
-                        className="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-zinc-900 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
-                      >
-                        {item.name}
-                      </a>
+                      <div key={item.name}>
+                        {item.dropdown ? (
+                          <div className="space-y-1">
+                            <div className="px-3 py-2 text-base/7 font-semibold text-zinc-900">
+                              {item.name}
+                            </div>
+                            <div className="pl-6 space-y-1">
+                              {item.dropdown.map(drop => (
+                                <a key={drop.title} href={drop.href} className="block rounded-lg py-2 pl-3 pr-3 text-sm/6 font-medium text-zinc-600 hover:bg-zinc-50">
+                                  {drop.title}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <a
+                            href={item.href}
+                            className="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-zinc-900 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
+                          >
+                            {item.name}
+                          </a>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}

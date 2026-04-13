@@ -49,7 +49,12 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
     const [uqExpanded, setUqExpanded] = useState(true)
 
     // WhatsApp Integration state
-    const [wsStatus, setWsStatus] = useState({ isReady: false, qrCode: null as string | null, disconnecting: false })
+    const [wsStatus, setWsStatus] = useState({ 
+        isReady: false, 
+        qrCode: null as string | null, 
+        disconnecting: false,
+        providerStatus: null as any 
+    })
     const [wsLoading, setWsLoading] = useState(false)
     const [isDisconnectDialogOpen, setIsDisconnectDialogOpen] = useState(false)
 
@@ -111,6 +116,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                 isReady: res.data.isReady,
                 qrCode: res.data.qrCode,
                 disconnecting: res.data.disconnecting ?? false,
+                providerStatus: res.data.providerStatus
             }));
         } catch (err) {
             console.error("Failed to poll WhatsApp status", err);
@@ -260,11 +266,45 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
             >
                 <div className='max-w-7xl mx-auto px-6 h-16 flex items-center justify-between'>
                     <div className='text-lg font-semibold tracking-tight' onClick={() => navigate.push("/")}>Use <span className='text-zinc-400'>AI</span></div>
-                    <button className='px-4 py-2 rounded-lg border border-zinc-300 text-sm hover:bg-zinc-100 transition' onClick={()=>navigate.push("/embed")}>Embed ChatBot</button>
+                    <div className='flex gap-2 shrink-0'>
+                        <button className='px-4 py-2 rounded-lg bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition' onClick={()=>navigate.push("/dashboard/analytics")}> Insights</button>
+                        <button className='px-4 py-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition' onClick={()=>navigate.push("/dashboard/crm/play")}> Play Mode</button>
+                        <button className='px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition' onClick={()=>navigate.push("/dashboard/crm")}> CRM</button>
+                        <button className='px-4 py-2 rounded-lg border border-zinc-300 text-sm hover:bg-zinc-100 transition' onClick={()=>navigate.push("/dashboard/agent-instructions")}> AI Rules</button>
+                    </div>
                 </div>
             </motion.div>
 
-            <div className='max-w-7xl mx-auto px-4 py-14 mt-20 grid grid-cols-1 lg:grid-cols-2 gap-10 items-start'>
+            <div className='max-w-7xl mx-auto px-4 mt-24 mb-[-40px]'>
+                <AnimatePresence>
+                    {(wsStatus.providerStatus?.openai?.error || wsStatus.providerStatus?.gemini?.error) && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-start gap-3 shadow-sm"
+                        >
+                            <span className="text-xl"></span>
+                            <div>
+                                <h3 className="text-sm font-bold text-red-900">AI Provider Alert</h3>
+                                <div className="text-xs text-red-700 mt-1 space-y-1">
+                                    {wsStatus.providerStatus?.openai?.error && (
+                                        <p><strong>OpenAI:</strong> {wsStatus.providerStatus.openai.error}</p>
+                                    )}
+                                    {wsStatus.providerStatus?.gemini?.error && (
+                                        <p><strong>Gemini:</strong> {wsStatus.providerStatus.gemini.error}</p>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-red-500 mt-2">
+                                    Your AI might be temporarily offline. Please check your billing or API settings.
+                                </p>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            <div className='max-w-7xl mx-auto px-4 py-14 grid grid-cols-1 lg:grid-cols-2 gap-10 items-start'>
                 <div className='space-y-10'>
                     <motion.div
                         className='w-full bg-white rounded-2xl shadow-xl p-10 relative'
@@ -291,7 +331,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                 <div className='flex items-center gap-3'>
                                     <label className='cursor-pointer flex-shrink-0'>
                                         <div className={`px-4 py-2 border border-zinc-300 rounded-lg text-sm transition ${uploadingPdf ? 'bg-zinc-100 text-zinc-400' : 'bg-white hover:bg-zinc-50 text-zinc-700'}`}>
-                                            {uploadingPdf ? 'Scraping PDF...' : '📄 Upload PDF'}
+                                            {uploadingPdf ? 'Scraping PDF...' : ' Upload PDF'}
                                         </div>
                                         <input type="file" accept="application/pdf" className='hidden' onChange={handleFileUpload} disabled={uploadingPdf} />
                                     </label>
@@ -316,7 +356,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="text-sm font-medium text-emerald-600"
                             >
-                                ✓ Settings saved
+                                 Settings saved
                             </motion.span>}
 
                         </div>
@@ -353,7 +393,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                         {wsStatus.isReady ? (
                             <div className='bg-emerald-50 border border-emerald-100 rounded-xl p-6 flex items-center gap-5'>
                                 <div className='w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xl shadow-lg shadow-emerald-600/20'>
-                                    ✓
+                                    
                                 </div>
                                 <div>
                                     <p className='font-bold text-emerald-900'>System Connected</p>
@@ -363,7 +403,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                         ) : wsStatus.disconnecting ? (
                             <div className='flex flex-col items-center py-10'>
                                 <div className='w-14 h-14 bg-red-50 border border-red-100 rounded-2xl flex items-center justify-center mb-5 animate-pulse'>
-                                    <span className='text-2xl'>🔌</span>
+                                    <span className='text-2xl'></span>
                                 </div>
                                 <p className='text-sm font-medium text-zinc-600'>Disconnecting...</p>
                                 <p className='text-[10px] text-zinc-400 mt-2 uppercase tracking-widest'>Please wait a moment</p>
@@ -379,7 +419,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                         ) : (
                             <div className='flex flex-col items-center py-10 transition-all'>
                                 <div className='w-14 h-14 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-center mb-5'>
-                                    <span className='text-2xl'>💬</span>
+                                    <span className='text-2xl'></span>
                                 </div>
                                 <p className='text-sm font-medium text-zinc-700 mb-1'>Not Connected</p>
                                 <p className='text-xs text-zinc-400 mb-6'>Connect your WhatsApp to start answering customer messages automatically.</p>
@@ -390,7 +430,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                     onClick={handleConnectWhatsApp}
                                     className='px-6 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition disabled:opacity-60'
                                 >
-                                    {wsLoading ? 'Connecting...' : '🔗 Connect WhatsApp'}
+                                    {wsLoading ? 'Connecting...' : ' Connect WhatsApp'}
                                 </motion.button>
                             </div>
                         )}
@@ -409,7 +449,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                         >
                             <div className='flex items-center gap-3'>
                                 <div className='w-9 h-9 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-base'>
-                                    ❓
+                                    
                                 </div>
                                 <div className='text-left'>
                                     <h2 className='text-lg font-semibold text-zinc-900'>Unanswered Questions</h2>
@@ -444,7 +484,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                             <div className='py-10 text-center text-sm text-zinc-400'>Loading questions...</div>
                                         ) : unansweredQuestions.length === 0 ? (
                                             <div className='py-10 text-center'>
-                                                <div className='text-3xl mb-2'>🎉</div>
+                                                <div className='text-3xl mb-2'></div>
                                                 <p className='text-sm text-zinc-500 font-medium'>All caught up!</p>
                                                 <p className='text-xs text-zinc-400 mt-1'>No unanswered questions right now.</p>
                                             </div>
@@ -468,7 +508,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                                                             ? "bg-emerald-50 text-emerald-600 border border-emerald-200" 
                                                                             : "bg-blue-50 text-blue-600 border border-blue-200"
                                                                     }`}>
-                                                                        {q.source === "whatsapp" ? "💬" : "🌐"} {q.source}
+                                                                        {q.source === "whatsapp" ? "" : ""} {q.source}
                                                                     </span>
                                                                     <span className='text-[11px] text-zinc-400'>{formatTimeAgo(q.createdAt)}</span>
                                                                 </div>
@@ -510,7 +550,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                                                             autoFocus
                                                                         />
                                                                         <div className='flex items-center justify-between mt-2'>
-                                                                            <span className='text-[11px] text-zinc-400'>💡 This Q&A will be added to your knowledge base</span>
+                                                                            <span className='text-[11px] text-zinc-400'> This Q&A will be added to your knowledge base</span>
                                                                             <motion.button
                                                                                 whileHover={{ scale: 1.03 }}
                                                                                 whileTap={{ scale: 0.97 }}

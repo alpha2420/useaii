@@ -83,7 +83,7 @@ function EmbedClient({ ownerId }: { ownerId: string }) {
                     <div className='relative bg-zinc-900 text-zinc-100 rounded-xl p-5 text-sm font-mono mb-10'>
                         <pre className='overflow-x-auto'>{embedCode}</pre>
                         <button className='absolute top-3 right-3 bg-white text-zinc-900 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-zinc-200 transition' onClick={copyCode}>
-                            {copied ? "Copied ✓" : "Copy"}
+                            {copied ? "Copied " : "Copy"}
                         </button>
                     </div>
 
@@ -103,7 +103,7 @@ function EmbedClient({ ownerId }: { ownerId: string }) {
                                     <span className='text-sm text-zinc-400'>Loading...</span>
                                 ) : whatsappState.isReady ? (
                                     <div className='flex items-center justify-center w-[120px] h-[120px] bg-emerald-50 rounded-lg border border-emerald-200'>
-                                        <span className='text-emerald-500 text-4xl'>✓</span>
+                                        <span className='text-emerald-500 text-4xl'></span>
                                     </div>
                                 ) : whatsappState.qrCode ? (
                                     <QRCode value={whatsappState.qrCode} size={120} />
@@ -129,7 +129,7 @@ function EmbedClient({ ownerId }: { ownerId: string }) {
                                         <h3 className='font-medium text-zinc-800'>Link your device</h3>
                                         <ol className='text-sm text-zinc-500 mt-2 list-decimal list-inside space-y-1'>
                                             <li>Open WhatsApp on your phone</li>
-                                            <li>Tap Menu ⠇ or Settings ⚙️</li>
+                                            <li>Tap Menu ⠇ or Settings </li>
                                             <li>Select <strong>Linked Devices</strong></li>
                                             <li>Point your phone at the screen to capture the QR code</li>
                                         </ol>
@@ -180,7 +180,7 @@ function EmbedClient({ ownerId }: { ownerId: string }) {
       cursor-pointer
     "
                                 >
-                                    🗨️
+                                    
                                 </motion.div>
 
 

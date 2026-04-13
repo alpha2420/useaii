@@ -102,9 +102,19 @@ export default function HomeClient({ email }: { email: string }) {
                     companyName: "Use.ai"
                 }}
                 navigation={[
+                    { 
+                        name: 'Use Cases', 
+                        dropdown: [
+                            { title: 'Flows', desc: 'Trigger → condition → action automations', href: '#' },
+                            { title: 'Autopilot', desc: 'AI WhatsApp bot for your customers', href: '#' },
+                            { title: 'Conversational CRM', desc: 'Turn WhatsApp chats into a sales pipeline', href: '#' },
+                            { title: 'Campaigns', desc: 'Broadcast, trigger & drip sequences', href: '#' },
+                            { title: 'Expense Tracking', desc: 'Track team expenses from WhatsApp', href: '#' }
+                        ]
+                    },
+                    { name: 'Pricing', href: '#' },
                     { name: 'Features', href: '#features' },
                     { name: 'Roadmap', href: '/roadmap' },
-                    { name: 'Reviews', href: '#reviews' },
                 ]}
                 loginText={email ? "Dashboard" : "Log in"}
                 loginHref={email ? "/dashboard" : "/login"}
@@ -203,19 +213,19 @@ export default function HomeClient({ email }: { email: string }) {
                                     </div>
                                 </div>
                                 <div className='p-5 flex flex-col gap-3'>
-                                    <div className='bg-white p-3 rounded-2xl rounded-tl-none max-w-[80%] text-sm text-zinc-800 shadow-sm border border-zinc-100'>Red sofa ka price kya hai? 🛋️</div>
+                                    <div className='bg-white p-3 rounded-2xl rounded-tl-none max-w-[80%] text-sm text-zinc-800 shadow-sm border border-zinc-100'>Red sofa ka price kya hai? </div>
                                     <div className='flex items-center gap-2'>
                                         <span className='text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold border border-blue-100'>UseAI · 96% confident · 1.8 seconds</span>
                                     </div>
                                     <div className='bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none self-end max-w-[85%] text-sm shadow-md'>
-                                        Namaste! 😊 Red Oslo Sofa ₹32,999 mein available hai — abhi stock mein hai! Free delivery ₹5,000+ pe, 3 working days. Book karein? 🪑
+                                        Namaste!  Red Oslo Sofa ₹32,999 mein available hai — abhi stock mein hai! Free delivery ₹5,000+ pe, 3 working days. Book karein? 
                                     </div>
                                     <div className='bg-white p-3 rounded-2xl rounded-tl-none max-w-[80%] text-sm text-zinc-800 shadow-sm border border-zinc-100 mt-2'>Saturday delivery possible hai?</div>
                                     <div className='flex items-center gap-2'>
                                         <span className='text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold border border-blue-100'>UseAI · 94% confident · 1.5 seconds</span>
                                     </div>
                                     <div className='bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none self-end max-w-[85%] text-sm shadow-md'>
-                                        Bilkul! 🎉 Saturday 10 AM–1 PM slot available hai. Apna naam our address share karein, main confirm kar deta hoon!
+                                        Bilkul!  Saturday 10 AM–1 PM slot available hai. Apna naam our address share karein, main confirm kar deta hoon!
                                     </div>
                                 </div>
                             </div>
@@ -509,7 +519,7 @@ export default function HomeClient({ email }: { email: string }) {
                     
                     {reviewSuccess ? (
                         <div className='text-center py-10 bg-green-50 rounded-2xl border border-green-100'>
-                            <div className='text-4xl mb-4'>🎉</div>
+                            <div className='text-4xl mb-4'></div>
                             <h3 className='text-lg font-bold text-green-800'>Thank you for your feedback!</h3>
                             <button onClick={() => setReviewSuccess(false)} className='mt-6 px-6 py-2 text-sm bg-white border border-zinc-200 rounded-lg shadow-sm hover:bg-zinc-50 transition font-medium'>Submit another</button>
                         </div>
@@ -521,7 +531,7 @@ export default function HomeClient({ email }: { email: string }) {
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <button key={star} type="button" onClick={() => setRating(star)}
                                             className={`text-4xl transition-all ${rating >= star ? 'text-amber-400 scale-110' : 'text-zinc-300 hover:text-amber-200 hover:scale-110 drop-shadow-sm'}`}>
-                                            ★
+                                            
                                         </button>
                                     ))}
                                 </div>
