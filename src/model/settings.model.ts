@@ -8,6 +8,7 @@ interface ISettings {
     whatsappNumber: string;
     // Agent Instructions — custom AI behavior rules per business
     agentInstructions: string;
+    mediaLinks: { name: string; url: string }[];
 }
  
 const settingsSchema = new Schema<ISettings>(
@@ -18,6 +19,7 @@ const settingsSchema = new Schema<ISettings>(
         knowledge: { type: String },
         whatsappNumber: { type: String },
         agentInstructions: { type: String, default: "" },
+        mediaLinks: { type: [{ name: String, url: String }], default: [] },
     },
     { timestamps: true }
 );

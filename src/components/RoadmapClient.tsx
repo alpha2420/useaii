@@ -175,7 +175,7 @@ export default function RoadmapClient() {
             <header className='sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100'>
                 <div className='max-w-6xl mx-auto px-6 h-14 flex items-center justify-between'>
                     <Link href='/' className='text-lg font-bold tracking-tight'>
-                        Use<span className='text-blue-600'>.ai</span>
+                        Use<span className='text-blue-600'>Converra</span>
                     </Link>
                     <div className='flex items-center gap-6'>
                         <Link href='/' className='inline-flex items-center gap-1.5 text-sm font-semibold text-zinc-500 hover:text-zinc-900 transition'>
@@ -207,7 +207,7 @@ export default function RoadmapClient() {
                             <span className='text-blue-600'>next</span>
                         </h1>
                         <p className='mt-6 text-zinc-500 text-lg lg:text-xl font-medium max-w-2xl mx-auto leading-relaxed'>
-                            UseAI is evolving fast. Here&apos;s a detailed look at every feature we&apos;re shipping — built to make your business unstoppable.
+                            UseConverra is evolving fast. Here&apos;s a detailed look at every feature we&apos;re shipping — built to make your business unstoppable.
                         </p>
                     </motion.div>
 
@@ -302,7 +302,7 @@ export default function RoadmapClient() {
                         Want early access to these features?
                     </h2>
                     <p className='text-zinc-500 text-lg font-medium mb-8 max-w-xl mx-auto'>
-                        Join hundreds of businesses automating their customer support with UseAI today.
+                        Join hundreds of businesses automating their customer support with UseConverra today.
                     </p>
                     <div className='flex flex-col sm:flex-row items-center justify-center gap-3'>
                         <Link href='/login' className='w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-8 py-3.5 rounded-2xl transition shadow-lg shadow-blue-600/20'>
@@ -320,10 +320,10 @@ export default function RoadmapClient() {
             {/* Footer */}
             <footer className='py-8 border-t border-zinc-100 text-center'>
                 <div className='text-base font-bold tracking-tight mb-1'>
-                    Use<span className='text-blue-600'>.ai</span>
+                    Use<span className='text-blue-600'>Converra</span>
                 </div>
                 <p className='text-xs text-zinc-400 font-medium'>
-                    &copy; {new Date().getFullYear()} UseAI. All rights reserved.
+                    &copy; {new Date().getFullYear()} UseConverra. All rights reserved.
                 </p>
             </footer>
         </div>

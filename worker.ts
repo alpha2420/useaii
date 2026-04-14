@@ -11,6 +11,7 @@ import UnansweredQuestion from './src/model/unanswered-question.model';
 import Conversation from './src/model/conversation.model';
 import PendingMessage from './src/model/pending-message.model';
 import { analyzeConversation } from './src/lib/analyzeConversation';
+import { buildMemoryContext } from './src/lib/buildMemoryContext';
 
 if (typeof global.fetch === 'undefined') {
     global.fetch = fetch as any;
@@ -101,46 +102,6 @@ async function pollPendingMessages() {
     }
 }
 
-// ─── Provider error helpers ───────────────────────────────────────────────────
-async function reportProviderError(ownerId: string, provider: 'openai' | 'gemini' | 'grok' | 'groq', error: any) {
-    let msg = "Unknown error";
-    if (error?.status === 429) msg = "Quota exceeded or too many requests";
-    else if (error?.status === 401) msg = "Invalid API key";
-    else msg = error?.message || String(error);
-    await WhatsappStatus.findOneAndUpdate(
-        { ownerId },
-        { $set: { [`providerStatus.${provider}`]: { error: msg, updatedAt: new Date() } } }
-    ).catch(e => console.error("[Worker] Failed reporting error:", e));
-}
-
-async function clearProviderError(ownerId: string, provider: 'openai' | 'gemini' | 'grok' | 'groq') {
-    await WhatsappStatus.findOneAndUpdate(
-        { ownerId },
-        { $unset: { [`providerStatus.${provider}`]: "" } }
-    ).catch(() => {});
-}
-
-// ─── Deep reset a corrupted session ──────────────────────────────────────────
-async function deepResetSession(ownerId: string) {
-    console.warn(`[Worker] Deep resetting session for ${ownerId}...`);
-    try {
-        // Drop the RemoteAuth session collection from MongoDB
-        const collectionName = 'whatsapp-RemoteAuth-' + ownerId;
-        const collections = await mongoose.connection.db?.listCollections({ name: collectionName }).toArray();
-        if (collections && collections.length > 0) {
-            await mongoose.connection.collection(collectionName).drop();
-            console.log(`[Worker] Dropped corrupted session for ${ownerId}`);
-        }
-        await WhatsappStatus.findOneAndUpdate({ ownerId }, {
-            isReady: false,
-            qrCode: null,
-            $unset: { providerStatus: "" }
-        });
-    } catch (e) {
-        console.error("[Worker] Reset failed:", e);
-    }
-}
-
 // ─── Start a WhatsApp client for a given owner ───────────────────────────────
 async function startClient(ownerId: string) {
     console.log(`[Worker] Initiating client for ${ownerId}`);
@@ -153,26 +114,15 @@ async function startClient(ownerId: string) {
         }),
         puppeteer: {
             headless: true,
-            handleSIGINT: false,
-            handleSIGTERM: false,
             args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu',
-                '--disable-extensions',
-                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+                '--no-sandbox', '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas',
+                '--no-first-run', '--no-zygote', '--disable-gpu',
             ],
         },
     });
 
-    // Register all event handlers BEFORE initialize()
-    client.on('loading_screen', (percent, message) => {
-        console.log(`[Worker] ${ownerId} loading: ${percent}% - ${message}`);
-    });
+    activeClients.set(ownerId, client);
 
     client.on('qr', async (qr) => {
         console.log(`[Worker] QR generated for ${ownerId}`);
@@ -196,28 +146,27 @@ async function startClient(ownerId: string) {
         console.log(`[Worker] Session saved to MongoDB for ${ownerId}`);
     });
 
-    client.on('disconnected', (reason) => {
-        console.log(`[Worker] ${ownerId} was logged out:`, reason);
+    client.on('disconnected', async (reason) => {
+        console.log(`[Worker] Disconnected ${ownerId}: ${reason}`);
         activeClients.delete(ownerId);
-        WhatsappStatus.findOneAndUpdate({ ownerId }, { isReady: false, qrCode: null }).catch(() => {});
-        // Auto-recovery: if it wasn't a manual disconnect, restart after 10s
-        if (reason !== 'NAVIGATION') {
-            console.log(`[Worker] Auto-recovering ${ownerId} in 10s...`);
-            setTimeout(() => startClient(ownerId), 10000);
-        }
+        await WhatsappStatus.findOneAndUpdate(
+            { ownerId },
+            { isReady: false, qrCode: null }
+        );
+        try { await client.destroy(); } catch {}
     });
 
-    // ─── Incoming message handler ─────────────────────────────────────────────
+    // ─── Incoming message handler ─────────────────────────────────────────
     client.on('message', async (msg) => {
         try {
             if (msg.fromMe || msg.isStatus) return;
             const chat = await msg.getChat();
             if (chat.isGroup) return;
 
-            // Guard: only handle text messages
+            // Guard: text only
             if (msg.type !== 'chat') {
                 await msg.reply(
-                    "I'm an AI assistant and currently cannot process voice notes or images. Please type your question. "
+                    "I'm an AI assistant and currently cannot process voice notes or images. Please type your question. 🙏"
                 );
                 return;
             }
@@ -236,46 +185,57 @@ async function startClient(ownerId: string) {
                 { upsert: true, new: true }
             );
 
-            // ── 2. Skip if AI is paused for this contact ──────────────────
-            const convoCheck = await Conversation.findOne({ ownerId, contactNumber }).lean();
-            if (convoCheck?.isAiPaused) {
+            // ── 2. Check if AI is paused ──────────────────────────────────
+            const existingConvo = await Conversation.findOne({ ownerId, contactNumber });
+            if (existingConvo?.isAiPaused) {
                 console.log(`[Worker] AI paused for ${contactNumber}, skipping.`);
                 return;
             }
 
-            // ── 3. Fetch settings (includes agentInstructions) ────────────
+            // ── 3. Fetch settings ─────────────────────────────────────────
             const setting = await Settings.findOne({ ownerId }).lean();
             if (!setting) return;
 
+            // ── 4. Build Memory Context ───────────────────────────────────
+            // This is the "AI Memory" feature — the AI knows who it's talking to
+            const memoryContext = await buildMemoryContext(existingConvo, ownerId);
+
+            const mediaLinks = setting.mediaLinks || [];
+            const MEDIA_LINKS_CONTEXT = mediaLinks.length > 0
+                ? `\n\n--- MEDIA & PHOTO LINKS ---\n${mediaLinks.map((l: any) => `${l.name} -> ${l.url}`).join("\n")}\nIMPORTANT RULE: If a customer asks to see a photo, product, or link that matches an item above, you MUST include its exact URL naturally in your reply. Do not invent links.`
+                : "";
+
             const KNOWLEDGE = `
-            business name: ${setting.businessName || "not provided"}
-            supportEmail: ${setting.supportEmail || "not provided"}
-            knowledge: ${setting.knowledge || "not provided"}
-            whatsappNumber: ${setting.whatsappNumber || "not provided"}
+            business name- ${setting.businessName || "not provided"}
+            supportEmail- ${setting.supportEmail || "not provided"}
+            knowledge- ${setting.knowledge || "not provided"}
+            whatsappNumber- ${setting.whatsappNumber || "not provided"}${MEDIA_LINKS_CONTEXT}
             `;
 
             const AGENT_INSTRUCTIONS = setting.agentInstructions
-                ? `\nSPECIAL INSTRUCTIONS FROM THE BUSINESS OWNER (follow these strictly):\n${setting.agentInstructions}\n`
+                ? `\nSPECIAL INSTRUCTIONS FROM THE BUSINESS OWNER (follow strictly):\n${setting.agentInstructions}\n`
                 : "";
 
+            // ── 5. Build prompt with memory injected ──────────────────────
             const prompt = `
-You are a professional customer support assistant for this business chatting on WhatsApp.
-Use ONLY the business information provided below. Keep answers concise and conversational.
-
-LANGUAGE RULE: Always respond in the SAME language the customer is using. If they write in Hindi, you MUST respond in Hindi (Devanagari script). If they use Hinglish, you can use Hinglish. If they use English, stay in English.
+You are a professional customer support assistant chatting on WhatsApp.
+Use ONLY the business information and memory provided below.
+Keep answers concise and conversational, suited for WhatsApp.
 ${AGENT_INSTRUCTIONS}
+${memoryContext}
+
 IMPORTANT: Respond ONLY with valid JSON, no extra text:
 {
   "canAnswer": true or false,
   "reply": "your answer here"
 }
 
-Set "canAnswer" to false if the question is not covered. Reply politely that the team will look into it.
+Set "canAnswer" to false only if the question is completely outside the business information.
 
 BUSINESS INFORMATION:
 ${KNOWLEDGE}
 
-CUSTOMER QUESTION:
+CUSTOMER'S CURRENT MESSAGE:
 ${msg.body}
 
 JSON RESPONSE:
@@ -285,7 +245,7 @@ JSON RESPONSE:
             let canAnswer = true;
             let aiSuccess = false;
 
-            // ── Try OpenAI first ──────────────────────────────────────────
+            // Try OpenAI
             const openaiKey = process.env.OPENAI_API_KEY;
             if (openaiKey && openaiKey !== "your_openai_api_key_here") {
                 try {
@@ -301,68 +261,12 @@ JSON RESPONSE:
                         canAnswer = parsed.canAnswer !== false;
                         reply = parsed.reply || "";
                         aiSuccess = true;
-                        await clearProviderError(ownerId, 'openai');
+                        console.log(`[Worker] OpenAI success for ${ownerId} (with memory)`);
                     }
-                } catch (e: any) {
-                    console.error(`[Worker] OpenAI failed:`, e);
-                    await reportProviderError(ownerId, 'openai', e);
-                }
+                } catch (e) { console.error(`[Worker] OpenAI failed:`, e); }
             }
 
-
-            // ── Fallback to Grok ──────────────────────────────────────────
-            if (!aiSuccess) {
-                const grokKey = process.env.GROK_API_KEY;
-                if (grokKey) {
-                    try {
-                        const grok = new OpenAI({ apiKey: grokKey, baseURL: "https://api.x.ai/v1" });
-                        const completion = await grok.chat.completions.create({
-                            model: "grok-4",
-                            messages: [{ role: 'user', content: prompt }],
-                            response_format: { type: 'json_object' },
-                        });
-                        const content = completion.choices[0].message.content;
-                        if (content) {
-                            const parsed = JSON.parse(content);
-                            canAnswer = parsed.canAnswer !== false;
-                            reply = parsed.reply || "";
-                            aiSuccess = true;
-                            await clearProviderError(ownerId, 'grok');
-                        }
-                    } catch (e: any) {
-                        console.error(`[Worker] Grok failed:`, e);
-                        await reportProviderError(ownerId, 'grok', e);
-                    }
-                }
-            }
-
-            // ── Fallback to Groq ──────────────────────────────────────────
-            if (!aiSuccess) {
-                const groqKey = process.env.GROQ_API_KEY;
-                if (groqKey) {
-                    try {
-                        const groq = new OpenAI({ apiKey: groqKey, baseURL: "https://api.groq.com/openai/v1" });
-                        const completion = await groq.chat.completions.create({
-                            model: "llama-3.3-70b-versatile",
-                            messages: [{ role: 'user', content: prompt }],
-                            response_format: { type: 'json_object' },
-                        });
-                        const content = completion.choices[0].message.content;
-                        if (content) {
-                            const parsed = JSON.parse(content);
-                            canAnswer = parsed.canAnswer !== false;
-                            reply = parsed.reply || "";
-                            aiSuccess = true;
-                            await clearProviderError(ownerId, 'groq');
-                        }
-                    } catch (e: any) {
-                        console.error(`[Worker] Groq failed:`, e);
-                        await reportProviderError(ownerId, 'groq', e);
-                    }
-                }
-            }
-
-            // ── Fallback to Gemini ────────────────────────────────────────
+            // Fallback Gemini
             if (!aiSuccess) {
                 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
                 const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
@@ -381,20 +285,14 @@ JSON RESPONSE:
                             canAnswer = parsed.canAnswer !== false;
                             reply = parsed.reply || "";
                             aiSuccess = true;
-                            await clearProviderError(ownerId, 'gemini');
                             break;
                         }
-                    } catch (e: any) {
-                        if (modelName === modelsToTry[modelsToTry.length - 1]) {
-                            await reportProviderError(ownerId, 'gemini', e);
-                        }
-                        continue;
-                    }
+                    } catch { continue; }
                 }
             }
 
             if (!aiSuccess) {
-                await msg.reply("Hi! Our support assistant is temporarily unavailable. Please try again shortly. ");
+                await msg.reply("Hi! Our support assistant is temporarily unavailable. Please try again shortly. 🙏");
                 return;
             }
 
@@ -406,7 +304,7 @@ JSON RESPONSE:
 
             if (reply) await msg.reply(reply);
 
-            // ── 4. Save bot reply ─────────────────────────────────────────
+            // ── 6. Save bot reply ─────────────────────────────────────────
             const updatedConvo = await Conversation.findOneAndUpdate(
                 { ownerId, contactNumber },
                 {
@@ -416,9 +314,9 @@ JSON RESPONSE:
                 { new: true }
             );
 
-            // ── 5. Run full analysis (async, non-blocking) ────────────────
+            // ── 7. Run analysis async (intent, lead score, next action, enriched) ──
             if (updatedConvo) {
-                analyzeConversation(updatedConvo.messages, ownerId)
+                analyzeConversation(updatedConvo.messages)
                     .then(async (analysis) => {
                         if (!analysis) return;
                         await Conversation.findByIdAndUpdate(updatedConvo._id, {
@@ -438,7 +336,7 @@ JSON RESPONSE:
                                 lastAnalyzedAt: new Date(),
                             },
                         });
-                        console.log(`[Worker] Analysis done for ${contactNumber}: ${analysis.leadScore} / ${analysis.nextBestActionType}`);
+                        console.log(`[Worker] Analysis + memory done for ${contactNumber}`);
                     })
                     .catch((e) => console.error("[Worker] Analysis failed:", e));
             }
@@ -448,20 +346,12 @@ JSON RESPONSE:
         }
     });
 
-    // ─── Register client and initialize ──────────────────────────────────────
-    activeClients.set(ownerId, client);
-
     try {
         await client.initialize();
     } catch (err) {
-        console.error(`[Worker] Failed to initialize ${ownerId}:`, err);
+        console.error(`[Worker] Init failed for ${ownerId}:`, err);
         activeClients.delete(ownerId);
         try { await client.destroy(); } catch {}
-        // Deep reset the corrupted session so next QR is clean
-        await deepResetSession(ownerId);
-        // Auto-retry after 15 seconds with a fresh start
-        console.log(`[Worker] Will retry ${ownerId} in 15s...`);
-        setTimeout(() => startClient(ownerId), 15000);
     }
 }
 

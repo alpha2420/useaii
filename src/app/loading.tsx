@@ -13,7 +13,7 @@ export default function Loading() {
         </div>
         
         <div className="text-center animate-pulse">
-          <div className="text-xl font-bold text-zinc-900 tracking-tight mb-2">Use<span className='text-blue-600'>.ai</span></div>
+          <div className="text-xl font-bold text-zinc-900 tracking-tight mb-2">Use<span className='text-blue-600'>Converra</span></div>
           <p className="text-zinc-500 font-bold text-xs uppercase tracking-[0.2em] opacity-80">Loading your experience...</p>
         </div>
       </div>

@@ -144,7 +144,7 @@ export function HeroLanding(props: HeroLandingProps) {
                   <img alt={logo?.alt} src={logo?.src} className="h-6 sm:h-8 w-auto" />
               ) : (
                   <div className="text-xl font-bold tracking-tight">
-                    Use<span className="text-blue-600">.ai</span>
+                    Use<span className="text-blue-600">Converra</span>
                   </div>
               )}
             </a>
@@ -216,7 +216,7 @@ export function HeroLanding(props: HeroLandingProps) {
                     <img alt={logo?.alt} src={logo?.src} className="h-6 sm:h-8 w-auto" />
                 ) : (
                     <div className="text-xl font-bold tracking-tight">
-                      Use<span className="text-blue-600">.ai</span>
+                      Use<span className="text-blue-600">Converra</span>
                     </div>
                 )}
               </a>

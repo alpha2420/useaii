@@ -98,8 +98,8 @@ export default function HomeClient({ email }: { email: string }) {
             <HeroLanding
                 logo={{
                     src: "",
-                    alt: "UseAI Logo",
-                    companyName: "Use.ai"
+                    alt: "UseConverra Logo",
+                    companyName: "UseConverra"
                 }}
                 navigation={[
                     { 
@@ -119,7 +119,7 @@ export default function HomeClient({ email }: { email: string }) {
                 loginText={email ? "Dashboard" : "Log in"}
                 loginHref={email ? "/dashboard" : "/login"}
                 title="AI that talks to your Customers."
-                description="Upload your business docs, and UseAI instantly answers customer queries on your Website and WhatsApp — accurately, in any language, while you sleep."
+                description="Upload your business docs, and UseConverra instantly answers customer queries on your Website and WhatsApp — accurately, in any language, while you sleep."
                 callToActions={[
                     ...(email ? [
                         { text: "Go to Dashboard", href: "/dashboard", variant: "primary" as const }
@@ -158,7 +158,7 @@ export default function HomeClient({ email }: { email: string }) {
                         <div className='pb-16 flex-1'>
                             <div className='inline-flex items-center px-3 py-1 bg-blue-50 border border-blue-100 rounded-full text-xs font-bold text-blue-600 mb-5 uppercase tracking-wider'>Sign Up — 2 Minutes</div>
                             <h3 className='text-2xl font-bold text-zinc-900 mb-3'>Create your free account</h3>
-                            <p className='text-zinc-500 font-medium leading-relaxed max-w-lg'>Visit UseAI, enter your business name, email, and password. Free account instantly — no credit card, no documents, no waiting.</p>
+                            <p className='text-zinc-500 font-medium leading-relaxed max-w-lg'>Visit UseConverra, enter your business name, email, and password. Free account instantly — no credit card, no documents, no waiting.</p>
                         </div>
                     </div>
 
@@ -209,20 +209,20 @@ export default function HomeClient({ email }: { email: string }) {
                                     <div className='w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm'>SF</div>
                                     <div>
                                         <p className='font-bold text-sm text-zinc-900'>Sharma Furniture</p>
-                                        <p className='text-xs text-blue-500 font-medium'>● Powered by UseAI — Always online</p>
+                                        <p className='text-xs text-blue-500 font-medium'>● Powered by UseConverra — Always online</p>
                                     </div>
                                 </div>
                                 <div className='p-5 flex flex-col gap-3'>
                                     <div className='bg-white p-3 rounded-2xl rounded-tl-none max-w-[80%] text-sm text-zinc-800 shadow-sm border border-zinc-100'>Red sofa ka price kya hai? </div>
                                     <div className='flex items-center gap-2'>
-                                        <span className='text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold border border-blue-100'>UseAI · 96% confident · 1.8 seconds</span>
+                                        <span className='text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold border border-blue-100'>UseConverra · 96% confident · 1.8 seconds</span>
                                     </div>
                                     <div className='bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none self-end max-w-[85%] text-sm shadow-md'>
                                         Namaste!  Red Oslo Sofa ₹32,999 mein available hai — abhi stock mein hai! Free delivery ₹5,000+ pe, 3 working days. Book karein? 
                                     </div>
                                     <div className='bg-white p-3 rounded-2xl rounded-tl-none max-w-[80%] text-sm text-zinc-800 shadow-sm border border-zinc-100 mt-2'>Saturday delivery possible hai?</div>
                                     <div className='flex items-center gap-2'>
-                                        <span className='text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold border border-blue-100'>UseAI · 94% confident · 1.5 seconds</span>
+                                        <span className='text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold border border-blue-100'>UseConverra · 94% confident · 1.5 seconds</span>
                                     </div>
                                     <div className='bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none self-end max-w-[85%] text-sm shadow-md'>
                                         Bilkul!  Saturday 10 AM–1 PM slot available hai. Apna naam our address share karein, main confirm kar deta hoon!
@@ -237,7 +237,7 @@ export default function HomeClient({ email }: { email: string }) {
             {/* Pain Points Grid */}
             <section className='py-24 px-6 max-w-4xl mx-auto'>
                 <div className='text-center mb-16'>
-                    <h2 className='text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900'>What is UseAI Custom AI Chatbot?</h2>
+                    <h2 className='text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900'>What is UseConverra Custom AI Chatbot?</h2>
                     <p className='text-zinc-500 mt-4 text-lg font-medium'>You&apos;re probably stuck in the following:</p>
                 </div>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
@@ -263,7 +263,7 @@ export default function HomeClient({ email }: { email: string }) {
                 <div className='bg-white border border-zinc-200 rounded-[2.5rem] p-8 lg:p-16 grid lg:grid-cols-2 gap-16 items-center shadow-sm relative overflow-hidden'>
                     <div className='absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-[100px] -z-10 opacity-60'></div>
                     <div>
-                        <h2 className='text-3xl font-bold tracking-tight text-zinc-900'>Enter UseAI, a custom AI chatbot</h2>
+                        <h2 className='text-3xl font-bold tracking-tight text-zinc-900'>Enter UseConverra, a custom AI chatbot</h2>
                         <p className='text-zinc-500 mt-3 font-medium mb-10 text-lg'>Experience the power of a 24/7 intelligent support agent tailored to your business.</p>
                         
                         <div className='space-y-8'>
@@ -309,7 +309,7 @@ export default function HomeClient({ email }: { email: string }) {
             <section className='py-24 px-6 max-w-6xl mx-auto border-t border-zinc-100 mt-10'>
                 <div className='text-center mb-16'>
                     <h2 className='text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900'>
-                        Platforms Where You Can Use UseAI
+                        Platforms Where You Can Use UseConverra
                     </h2>
                     <p className='text-zinc-500 mt-4 text-lg font-medium'>
                         Seamlessly Integrate and automate across multiple platforms
@@ -382,7 +382,7 @@ export default function HomeClient({ email }: { email: string }) {
                             </div>
                             <h3 className='font-bold text-base text-zinc-900 mb-2'>WhatsApp API</h3>
                             <p className='text-zinc-500 font-medium text-xs leading-relaxed'>
-                                Connect WhatsApp API, send campaigns, and let UseAI handle interested customer queries.
+                                Connect WhatsApp API, send campaigns, and let UseConverra handle interested customer queries.
                             </p>
                         </motion.div>
 
@@ -399,7 +399,7 @@ export default function HomeClient({ email }: { email: string }) {
                             </div>
                             <h3 className='font-bold text-base text-zinc-900 mb-2'>Applications</h3>
                             <p className='text-zinc-500 font-medium text-xs leading-relaxed'>
-                                Train UseAI and offer in-app support so customers get help without leaving.
+                                Train UseConverra and offer in-app support so customers get help without leaving.
                             </p>
                         </motion.div>
                     </div>
@@ -466,7 +466,7 @@ export default function HomeClient({ email }: { email: string }) {
             {/* Why Choose Grids */}
             <section className='py-24 px-6 max-w-5xl mx-auto border-t border-zinc-100 mt-10'>
                 <div className='text-center mb-16'>
-                    <h2 className='text-3xl font-bold tracking-tight text-zinc-900'>Why businesses trust UseAI?</h2>
+                    <h2 className='text-3xl font-bold tracking-tight text-zinc-900'>Why businesses trust UseConverra?</h2>
                     <p className='text-zinc-500 font-medium mt-3 text-lg'>The most reliable AI support agent for Website and WhatsApp.</p>
                 </div>
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-y-16 gap-x-12'>
@@ -498,7 +498,7 @@ export default function HomeClient({ email }: { email: string }) {
                     
                     <div className='relative z-10'>
                         <h2 className='text-4xl lg:text-5xl font-bold mb-6 tracking-tight'>Ready to automate your support?</h2>
-                        <p className='text-zinc-400 text-lg mb-12 max-w-2xl mx-auto font-medium'>Join hundreds of businesses using UseAI to resolve customer queries 24/7 without lifting a finger.</p>
+                        <p className='text-zinc-400 text-lg mb-12 max-w-2xl mx-auto font-medium'>Join hundreds of businesses using UseConverra to resolve customer queries 24/7 without lifting a finger.</p>
                         <div className='flex flex-col sm:flex-row items-center justify-center gap-4'>
                             <button onClick={handleLogin} className='w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-2xl font-bold text-lg transition shadow-xl shadow-blue-600/30'>
                                 {loading ? 'One moment...' : 'Start for Free'}
@@ -555,8 +555,8 @@ export default function HomeClient({ email }: { email: string }) {
 
             {/* Footer */}
             <footer className='py-12 border-t border-zinc-200 bg-white text-center'>
-                <div className='text-xl font-bold tracking-tight mb-4'>Use<span className='text-blue-600'>.ai</span></div>
-                <p className='text-sm font-medium text-zinc-500 mb-2'>&copy; {new Date().getFullYear()} UseAI. All rights reserved.</p>
+                <div className='text-xl font-bold tracking-tight mb-4'>Use<span className='text-blue-600'>Converra</span></div>
+                <p className='text-sm font-medium text-zinc-500 mb-2'>&copy; {new Date().getFullYear()} UseConverra. All rights reserved.</p>
                 <p className='text-sm font-medium text-zinc-500'>Support: <a href="mailto:shikhar482006@gmail.com" className='text-blue-600 hover:underline'>shikhar482006@gmail.com</a></p>
             </footer>
         </div>

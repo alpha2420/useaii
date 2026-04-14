@@ -27,6 +27,9 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
     const [supportEmail, setSupportEmail] = useState("")
     const [knowledge, setKnowledge] = useState("")
     const [whatsappNumber, setWhatsappNumber] = useState("")
+    const [mediaLinks, setMediaLinks] = useState<{name: string, url: string}[]>([])
+    const [newLinkName, setNewLinkName] = useState("")
+    const [newLinkUrl, setNewLinkUrl] = useState("")
     const [loading, setLoading] = useState(false)
     const [saved, setSaved] = useState(false)
 
@@ -61,7 +64,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
     const handleSettings = async () => {
         setLoading(true)
         try {
-            const result = await axios.post("/api/settings", { ownerId, businessName, supportEmail, knowledge, whatsappNumber })
+            const result = await axios.post("/api/settings", { ownerId, businessName, supportEmail, knowledge, whatsappNumber, mediaLinks })
             console.log(result.data)
             setLoading(false)
             setSaved(true)
@@ -82,6 +85,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                         setSupportEmail(result.data.supportEmail || "")
                         setKnowledge(result.data.knowledge || "")
                         setWhatsappNumber(result.data.whatsappNumber || "")
+                        setMediaLinks(result.data.mediaLinks || [])
                     }
                 } catch (error) {
                     console.log(error)
@@ -265,12 +269,13 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                 className='fixed top-0 left-0 w-full z-50 bg-white/70 backdrop-blur-xl border-b border-zinc-200'
             >
                 <div className='max-w-7xl mx-auto px-6 h-16 flex items-center justify-between'>
-                    <div className='text-lg font-semibold tracking-tight' onClick={() => navigate.push("/")}>Use <span className='text-zinc-400'>AI</span></div>
+                    <div className='text-lg font-semibold tracking-tight' onClick={() => navigate.push("/")}>Use <span className='text-zinc-400'>Converra</span></div>
                     <div className='flex gap-2 shrink-0'>
                         <button className='px-4 py-2 rounded-lg bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition' onClick={()=>navigate.push("/dashboard/analytics")}> Insights</button>
                         <button className='px-4 py-2 rounded-lg bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-zinc-200 transition' onClick={()=>navigate.push("/dashboard/crm/play")}> Play Mode</button>
                         <button className='px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition' onClick={()=>navigate.push("/dashboard/crm")}> CRM</button>
                         <button className='px-4 py-2 rounded-lg border border-zinc-300 text-sm hover:bg-zinc-100 transition' onClick={()=>navigate.push("/dashboard/agent-instructions")}> AI Rules</button>
+                        <button className='px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition' onClick={()=>navigate.push("/dashboard/corrections")}>🧠 AI Learning</button>
                     </div>
                 </div>
             </motion.div>
@@ -337,6 +342,47 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                     </label>
                                     <span className='text-xs text-zinc-400 max-w-[200px]'>Extracted text will be appended automatically above.</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className='mb-10'>
+                            <h1 className='text-lg font-medium mb-4'>Media & Photo Links</h1>
+                            <p className='text-sm text-zinc-500 mb-4'>Add image or product links here. The AI will send these specific links when asked about them.</p>
+                            
+                            <div className='space-y-3 mb-4'>
+                                {mediaLinks.map((link, idx) => (
+                                    <div key={idx} className='flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-lg p-3'>
+                                        <div className='truncate pr-4'>
+                                            <p className='text-sm font-semibold text-zinc-800'>{link.name}</p>
+                                            <a href={link.url} target='_blank' rel='noreferrer' className='text-xs text-blue-500 hover:underline truncate block'>{link.url}</a>
+                                        </div>
+                                        <button onClick={() => setMediaLinks(prev => prev.filter((_, i) => i !== idx))} className='text-red-500 hover:text-red-700 text-sm font-medium px-2'>
+                                            Delete
+                                        </button>
+                                    </div>
+                                ))}
+                                {mediaLinks.length === 0 && (
+                                    <p className='text-xs text-zinc-400 italic'>No media links added yet.</p>
+                                )}
+                            </div>
+
+                            <div className='flex gap-2 items-center'>
+                                <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-2'>
+                                    <input type="text" placeholder="Label (e.g., 'Pricing PDF' or 'Hostel Photo')" className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkName} onChange={e => setNewLinkName(e.target.value)} />
+                                    <input type="url" placeholder="https://..." className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} />
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if(newLinkName.trim() && newLinkUrl.trim()) {
+                                            setMediaLinks(prev => [...prev, {name: newLinkName.trim(), url: newLinkUrl.trim()}]);
+                                            setNewLinkName("");
+                                            setNewLinkUrl("");
+                                        }
+                                    }}
+                                    className='px-4 py-2.5 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition whitespace-nowrap'
+                                >
+                                    + Add Link
+                                </button>
                             </div>
                         </div>
 
