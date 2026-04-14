@@ -144,7 +144,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         setWsLoading(true);
         try {
             await axios.post("/api/whatsapp/disconnect", { ownerId });
-            setWsStatus({ isReady: false, qrCode: null, disconnecting: true });
+            setWsStatus(prev => ({ ...prev, isReady: false, qrCode: null, disconnecting: true }));
         } catch (err) {
             console.error("Failed to disconnect", err);
         } finally {
