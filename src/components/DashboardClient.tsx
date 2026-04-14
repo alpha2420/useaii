@@ -131,7 +131,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         setWsLoading(true);
         try {
             await axios.post("/api/whatsapp/connect", { ownerId });
-            setWsStatus({ isReady: false, qrCode: null, disconnecting: false });
+            setWsStatus(prev => ({ ...prev, isReady: false, qrCode: null, disconnecting: false }));
         } catch (err) {
             console.error("Failed to connect", err);
         } finally {
