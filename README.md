@@ -29,8 +29,21 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## 🚀 Production Deployment (Hostinger VPS)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This application is hosted on a dedicated Ubuntu VPS. All updates are seamlessly pushed to the server via an automated Expect script.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+To deploy your new updates after committing to GitHub:
+
+1. Commit and push your changes to GitHub normally:
+   ```bash
+   git add .
+   git commit -m "your message"
+   git push origin main
+   ```
+2. Run the automated VPS deployment script locally:
+   ```bash
+   ./scratch/update_server.exp
+   ```
+
+*(Note: The deployment script `update_server.exp` is securely checked into version control. Any other test or output files in the `scratch/` directory are ignored.)*
