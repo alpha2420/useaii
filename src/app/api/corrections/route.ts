@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
         await connectDb();
 
-        const corrections = await AICorrection.find({ ownerId: session.userId })
+        const corrections = await AICorrection.find({ ownerId: session.user.id })
             .sort({ createdAt: -1 })
             .lean();
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         }
 
         const correction = await AICorrection.create({
-            ownerId: session.userId,
+            ownerId: session.user.id,
             contactNumber,
             originalQuestion,
             badReply,
@@ -67,7 +67,7 @@ export async function DELETE(req: NextRequest) {
         const id = searchParams.get("id");
         if (!id) return NextResponse.json({ message: "id is required" }, { status: 400 });
 
-        await AICorrection.deleteOne({ _id: id, ownerId: session.userId });
+        await AICorrection.deleteOne({ _id: id, ownerId: session.user.id });
 
         return NextResponse.json({ message: "Correction deleted" });
     } catch (error) {
