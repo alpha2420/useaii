@@ -33,7 +33,7 @@ export async function requireRole(
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
  
-    const userRole = (session.role as UserRole) || "viewer";
+    const userRole = ((session as any).role as UserRole) || "viewer";
     if (ROLE_RANK[userRole] < ROLE_RANK[minimumRole]) {
         return NextResponse.json(
             { message: `Access denied. Required role: ${minimumRole}` },
