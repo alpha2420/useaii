@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { getCachedReply, setCachedReply } from "@/lib/responseCache";
+import { preprocessMessage } from "@/lib/preprocessMessage";
 
 // Optional Rate Limiting Setup
 let ratelimit: Ratelimit | null = null;
@@ -30,6 +32,10 @@ export async function POST(req: NextRequest) {
                 { status: 400 }
             )
         }
+
+        // ── Pre-process: clean slang, emojis, filler before anything else ─────────
+        const cleanMessage = preprocessMessage(message);
+        console.log(`[Chat] Raw: "${message}" → Clean: "${cleanMessage}"`);
 
         // --- Rate Limiting ---
         if (ratelimit) {
@@ -74,42 +80,28 @@ export async function POST(req: NextRequest) {
         }
         // ------------------------------
 
-        const KNOWLEDGE = `
-        business name- ${setting.businessName || "not provided"}
-        supportEmail- ${setting.supportEmail || "not provided"}
-        knowledge- ${setting.knowledge || " not provided"}
-        `
+        // ── Cache Check (skip AI entirely if question was answered before) ─────
+        const cachedAnswer = await getCachedReply(ownerId, cleanMessage);
+        if (cachedAnswer) {
+            console.log(`[Chat] Cache hit for owner ${ownerId} — no AI call.`);
+            const cachedResponse = NextResponse.json(cachedAnswer);
+            cachedResponse.headers.set("Access-Control-Allow-Origin", "*");
+            cachedResponse.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+            cachedResponse.headers.set("Access-Control-Allow-Headers", "Content-Type");
+            return cachedResponse;
+        }
+        // ────────────────────────────────────────────────────────────────────
 
-        const prompt = `
-You are a professional customer support assistant for this business.
+        // Truncate knowledge to 800 chars max to reduce input tokens
+        const knowledgeTrimmed = (setting.knowledge || "not provided").slice(0, 800);
 
-Use ONLY the information provided below to answer the customer's question.
-You may rephrase, summarize, or interpret the information if needed.
-Do NOT invent new policies, prices, or promises.
+        const KNOWLEDGE = `name: ${setting.businessName || "not provided"} | email: ${setting.supportEmail || "not provided"} | info: ${knowledgeTrimmed}`;
 
-IMPORTANT: You must respond ONLY with valid JSON in the exact format below, with no extra text before or after:
-{
-  "canAnswer": true or false,
-  "reply": "your answer here"
-}
+        const prompt = `Support assistant. Use ONLY the info below. Reply JSON: {"canAnswer":true/false,"reply":"answer"}
+RULES: 1 short sentence only (max 12 words). No paragraphs. WhatsApp style.
 
-Set "canAnswer" to true if the business information below contains enough detail to answer the question accurately.
-Set "canAnswer" to false if the question asks about something NOT covered at all in the business information. In this case, set "reply" to a polite message like: "I'm sorry, I don't have information about that right now. Your question has been noted and someone from our team will look into it."
-
---------------------
-BUSINESS INFORMATION
---------------------
-${KNOWLEDGE}
-
---------------------
-CUSTOMER QUESTION
---------------------
-${message}
-
---------------------
-JSON RESPONSE
---------------------
-`;
+INFO: ${KNOWLEDGE}
+Q: ${cleanMessage}`;
 
         let reply = "";
         let canAnswer = true;
@@ -124,6 +116,7 @@ JSON RESPONSE
                     model: "gpt-4o-mini",
                     messages: [{ role: "user", content: prompt }],
                     response_format: { type: "json_object" },
+                    max_tokens: 120,
                 });
 
                 const content = completion.choices[0].message.content;
@@ -132,7 +125,8 @@ JSON RESPONSE
                     canAnswer = parsed.canAnswer !== false;
                     reply = parsed.reply || "";
                     aiSuccess = true;
-                    console.log(`[Chat] Success with OpenAI`);
+                    const usage = completion.usage;
+                    console.log(`[Chat] OpenAI success | Tokens: In=${usage?.prompt_tokens}, Out=${usage?.completion_tokens}, Total=${usage?.total_tokens}`);
                 }
             } catch (openaiError: unknown) {
                 console.error(`[Chat] OpenAI failed:`, (openaiError as any)?.message || openaiError);
@@ -151,10 +145,12 @@ JSON RESPONSE
                     console.log(`[Chat] Trying Gemini model: ${modelName} for owner ${ownerId}`);
                     geminiRes = await (ai as any).models.generateContent({
                         model: modelName,
-                        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+                        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                        generationConfig: { maxOutputTokens: 120 }
                     });
                     if (geminiRes) {
-                        console.log(`[Chat] Success with Gemini model: ${modelName}`);
+                        const usage = (geminiRes as any).usageMetadata;
+                        console.log(`[Chat] Gemini success | ${modelName} | Tokens: In=${usage?.promptTokenCount}, Out=${usage?.candidatesTokenCount}, Total=${usage?.totalTokenCount}`);
                         break;
                     }
                 } catch (apiError: unknown) {
@@ -199,6 +195,11 @@ JSON RESPONSE
             } catch (dbErr) {
                 console.error("[Chat] Failed to store unanswered question:", dbErr);
             }
+        }
+
+        // Save to cache for future reuse (only if AI could answer)
+        if (canAnswer && reply) {
+            setCachedReply(ownerId, message, reply).catch(() => {});
         }
 
         const response = NextResponse.json(reply)

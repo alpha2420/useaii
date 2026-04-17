@@ -48,19 +48,20 @@ export async function buildMemoryContext(
     }
 
     if (contactMemory.length > 0) {
-        parts.push(`CUSTOMER MEMORY (what you already know about this person):\n${contactMemory.join("\n")}`);
+        parts.push(`CUSTOMER:${contactMemory.join("|")}`);
     }
 
-    // ── 2. Recent conversation history (last 6 messages for context) ──────
-    const recentMessages = conversation.messages.slice(-6);
+    // ── 2. Recent conversation history (last 3 messages for context) ──────
+    const recentMessages = conversation.messages.slice(-3);
     if (recentMessages.length > 0) {
         const historyLines = recentMessages.map((m) => {
             const role =
-                m.role === "customer" ? "Customer" :
-                m.role === "owner" ? "Business Owner" : "You (AI)";
-            return `${role}: ${m.text}`;
+                m.role === "customer" ? "C" :
+                m.role === "owner" ? "S" : "B";
+            const text = m.text.length > 200 ? m.text.slice(0, 200) + "..." : m.text;
+            return `${role}: ${text}`;
         });
-        parts.push(`RECENT CONVERSATION HISTORY:\n${historyLines.join("\n")}`);
+        parts.push(`HISTORY:\n${historyLines.join("\n")}`);
     }
 
     // ── 3. Owner corrections — what the AI learned from mistakes ─────────
@@ -85,14 +86,5 @@ export async function buildMemoryContext(
 
     if (parts.length === 0) return "";
 
-    return `
---------------------
-AI MEMORY & CONTEXT
---------------------
-${parts.join("\n\n")}
---------------------
-Use this memory to personalize your response. Address the customer by name if known. 
-Never ask for information you already have (name, location, etc).
-If they are a returning customer, acknowledge the context naturally.
---------------------`;
+    return `[MEMORY]\n${parts.join("\n")}\nAddress customer by name if known. Never re-ask info you already have.`;
 }

@@ -12,6 +12,8 @@ import Conversation from './src/model/conversation.model';
 import PendingMessage from './src/model/pending-message.model';
 import { analyzeConversation } from './src/lib/analyzeConversation';
 import { buildMemoryContext } from './src/lib/buildMemoryContext';
+import { getCachedReply, setCachedReply } from './src/lib/responseCache';
+import { preprocessMessage } from './src/lib/preprocessMessage';
 
 if (typeof global.fetch === 'undefined') {
     global.fetch = fetch as any;
@@ -197,49 +199,49 @@ async function startClient(ownerId: string) {
             if (!setting) return;
 
             // ── 4. Build Memory Context ───────────────────────────────────
-            // This is the "AI Memory" feature — the AI knows who it's talking to
             const memoryContext = await buildMemoryContext(existingConvo, ownerId);
+
+            // ── 4b. Pre-process the raw customer message ──────────────────
+            // Clean slang, emojis, filler words before sending to AI
+            const cleanMessage = preprocessMessage(msg.body);
+            console.log(`[Worker] Raw: "${msg.body}" → Clean: "${cleanMessage}"`);
 
             const mediaLinks = setting.mediaLinks || [];
             const MEDIA_LINKS_CONTEXT = mediaLinks.length > 0
                 ? `\n\n--- MEDIA & PHOTO LINKS ---\n${mediaLinks.map((l: any) => `${l.name} -> ${l.url}`).join("\n")}\nIMPORTANT RULE: If a customer asks to see a photo, product, or link that matches an item above, you MUST include its exact URL naturally in your reply. Do not invent links.`
                 : "";
 
-            const KNOWLEDGE = `
-            business name- ${setting.businessName || "not provided"}
-            supportEmail- ${setting.supportEmail || "not provided"}
-            knowledge- ${setting.knowledge || "not provided"}
-            whatsappNumber- ${setting.whatsappNumber || "not provided"}${MEDIA_LINKS_CONTEXT}
-            `;
+            // Truncate knowledge to 800 chars max to avoid large context
+            const knowledgeTrimmed = (setting.knowledge || "not provided").slice(0, 800);
+
+            const KNOWLEDGE = `name:${setting.businessName || ""} | email:${setting.supportEmail || ""} | wa:${setting.whatsappNumber || ""} | info:${knowledgeTrimmed}${MEDIA_LINKS_CONTEXT}`;
 
             const AGENT_INSTRUCTIONS = setting.agentInstructions
                 ? `\nSPECIAL INSTRUCTIONS FROM THE BUSINESS OWNER (follow strictly):\n${setting.agentInstructions}\n`
                 : "";
 
-            // ── 5. Build prompt with memory injected ──────────────────────
-            const prompt = `
-You are a professional customer support assistant chatting on WhatsApp.
-Use ONLY the business information and memory provided below.
-Keep answers concise and conversational, suited for WhatsApp.
-${AGENT_INSTRUCTIONS}
-${memoryContext}
+            // ── 5. Check Response Cache (skip AI if this question was asked before) ──
+            const cachedReply = await getCachedReply(ownerId, cleanMessage);
+            if (cachedReply) {
+                await msg.reply(cachedReply);
+                // Still save the message to conversation history
+                await Conversation.findOneAndUpdate(
+                    { ownerId, contactNumber },
+                    {
+                        $push: { messages: { role: "bot", text: cachedReply, timestamp: new Date() } },
+                        $set: { lastMessageAt: new Date() },
+                    }
+                );
+                console.log(`[Worker] Cache hit for ${contactNumber} — no AI call made.`);
+                return;
+            }
 
-IMPORTANT: Respond ONLY with valid JSON, no extra text:
-{
-  "canAnswer": true or false,
-  "reply": "your answer here"
-}
-
-Set "canAnswer" to false only if the question is completely outside the business information.
-
-BUSINESS INFORMATION:
-${KNOWLEDGE}
-
-CUSTOMER'S CURRENT MESSAGE:
-${msg.body}
-
-JSON RESPONSE:
-`;
+            // ── 6. Build prompt and call AI ───────────────────────────────
+            const prompt = `WhatsApp support bot. JSON only: {"canAnswer":true/false,"reply":"answer"}
+RULES: 1 sentence max 12 words. No paragraphs. Direct answer only.
+${AGENT_INSTRUCTIONS}${memoryContext}
+INFO:${KNOWLEDGE}
+Q: ${cleanMessage}`;
 
             let reply = "";
             let canAnswer = true;
@@ -254,6 +256,7 @@ JSON RESPONSE:
                         model: "gpt-4o-mini",
                         messages: [{ role: 'user', content: prompt }],
                         response_format: { type: 'json_object' },
+                        max_tokens: 120,
                     });
                     const content = completion.choices[0].message.content;
                     if (content) {
@@ -261,7 +264,8 @@ JSON RESPONSE:
                         canAnswer = parsed.canAnswer !== false;
                         reply = parsed.reply || "";
                         aiSuccess = true;
-                        console.log(`[Worker] OpenAI success for ${ownerId} (with memory)`);
+                        const usage = completion.usage;
+                        console.log(`[Worker] OpenAI success | Tokens: In=${usage?.prompt_tokens}, Out=${usage?.completion_tokens}, Total=${usage?.total_tokens}`);
                     }
                 } catch (e) { console.error(`[Worker] OpenAI failed:`, e); }
             }
@@ -275,6 +279,7 @@ JSON RESPONSE:
                         const geminiRes = await (ai as any).models.generateContent({
                             model: modelName,
                             contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                            generationConfig: { maxOutputTokens: 120 }
                         });
                         if (geminiRes) {
                             let cleaned = (geminiRes.text || "").trim();
@@ -284,6 +289,8 @@ JSON RESPONSE:
                             const parsed = JSON.parse(cleaned);
                             canAnswer = parsed.canAnswer !== false;
                             reply = parsed.reply || "";
+                            const usage = (geminiRes as any).usageMetadata;
+                            console.log(`[Worker] Gemini success | Tokens: In=${usage?.promptTokenCount}, Out=${usage?.candidatesTokenCount}, Total=${usage?.totalTokenCount}`);
                             aiSuccess = true;
                             break;
                         }
@@ -302,7 +309,13 @@ JSON RESPONSE:
                 }).catch(() => {});
             }
 
-            if (reply) await msg.reply(reply);
+            if (reply) {
+                await msg.reply(reply);
+                // Save to cache so future identical questions skip AI entirely
+                if (canAnswer) {
+                    setCachedReply(ownerId, msg.body, reply).catch(() => {});
+                }
+            }
 
             // ── 6. Save bot reply ─────────────────────────────────────────
             const updatedConvo = await Conversation.findOneAndUpdate(
@@ -315,7 +328,8 @@ JSON RESPONSE:
             );
 
             // ── 7. Run analysis async (intent, lead score, next action, enriched) ──
-            if (updatedConvo) {
+            const msgCount = updatedConvo?.messages?.length || 0;
+            if (updatedConvo && (msgCount <= 1 || msgCount % 5 === 0)) {
                 analyzeConversation(updatedConvo.messages)
                     .then(async (analysis) => {
                         if (!analysis) return;
