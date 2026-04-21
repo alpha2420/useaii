@@ -254,6 +254,20 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         }
     }
 
+    const handleResetChat = async () => {
+        if (!ownerId) return;
+        setIsResetting(true);
+        try {
+            await axios.post("/api/chat/reset", { ownerId, contactNumber: "web-sandbox" });
+            setChatHistory([]);
+            setTestMessage("");
+        } catch (error) {
+            console.error("Reset error:", error);
+        } finally {
+            setIsResetting(false);
+        }
+    };
+
     const formatTimeAgo = (dateStr: string) => {
         const diff = Date.now() - new Date(dateStr).getTime()
         const minutes = Math.floor(diff / 60000)
@@ -640,12 +654,21 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                     className='w-full bg-white rounded-2xl shadow-xl border border-zinc-200 overflow-hidden sticky top-28 flex flex-col'
                     style={{ height: '700px' }}
                 >
-                    <div className='bg-black text-white px-6 py-4 flex justify-between items-center shrink-0'>
-                        <div className='font-medium flex items-center gap-3'>
-                            <span className='w-2 h-2 rounded-full bg-emerald-400 animate-pulse'></span>
-                            Test Your Bot
+                    <div className="flex items-center justify-between p-4 border-b border-white/5 bg-black/20">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <h3 className="font-medium text-white/90">Test Your Bot</h3>
                         </div>
-                        <span className='text-xs opacity-60'>Sandbox</span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleResetChat}
+                                disabled={isResetting}
+                                className="px-2 py-1 text-[10px] uppercase tracking-wider font-bold rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 transition-all border border-white/5"
+                            >
+                                {isResetting ? "Resetting..." : "Reset Chat"}
+                            </button>
+                            <span className="text-[10px] uppercase tracking-widest font-bold text-white/30">Sandbox</span>
+                        </div>
                     </div>
 
                     <div className='flex-1 overflow-y-auto p-6 space-y-4 bg-zinc-50 flex flex-col'>
