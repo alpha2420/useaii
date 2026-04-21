@@ -42,6 +42,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         { role: 'bot', content: 'Hi! Test your settings here. How can I help you today?' }
     ])
     const [chatLoading, setChatLoading] = useState(false)
+    const [isResetting, setIsResetting] = useState(false)
 
     // Unanswered Questions state
     const [unansweredQuestions, setUnansweredQuestions] = useState<UnansweredQ[]>([])
