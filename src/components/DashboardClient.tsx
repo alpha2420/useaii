@@ -204,13 +204,16 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         setUploadingPdf(true);
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("ownerId", ownerId || "");
 
         try {
             const res = await axios.post("/api/upload-pdf", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             if (res.data.text) {
-                setKnowledge(prev => prev + `\n\n--- [PDF Content: ${file.name}] ---\n\n${res.data.text}`);
+                // Append extracted PDF text to the knowledge box
+                setKnowledge(prev => (prev ? prev + `\n\n--- [PDF: ${file.name}] ---\n\n${res.data.text}` : res.data.text));
+                alert(`✅ PDF "${file.name}" extracted successfully! The content has been added to your Knowledge Base. Click Save to apply.`);
             }
         } catch (err) {
             console.error("Failed to parse PDF", err);
@@ -220,6 +223,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
             e.target.value = ''; // Reset input
         }
     }
+
 
     const handleTestChat = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -233,6 +237,7 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         try {
             const res = await axios.post("/api/chat", {
                 ownerId,
+                contactNumber: "web-sandbox",
                 history: chatHistory.map(m => ({
                     role: m.role === 'user' ? 'user' : 'model',
                     parts: [{ text: m.content }]
@@ -366,10 +371,16 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                 )}
                             </div>
 
-                            <div className='flex gap-2 items-center'>
-                                <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-2'>
-                                    <input type="text" placeholder="Label (e.g., 'Pricing PDF' or 'Hostel Photo')" className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkName} onChange={e => setNewLinkName(e.target.value)} />
-                                    <input type="url" placeholder="https://..." className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} />
+                            <div className='flex flex-col gap-4'>
+                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                                    <div className='space-y-1.5'>
+                                        <label className='text-[10px] font-bold text-zinc-400 ml-1 uppercase tracking-widest'>Section/Purpose</label>
+                                        <input type="text" placeholder="e.g. 'Girls Hostel' or 'Main Location'" className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkName} onChange={e => setNewLinkName(e.target.value)} />
+                                    </div>
+                                    <div className='space-y-1.5'>
+                                        <label className='text-[10px] font-bold text-zinc-400 ml-1 uppercase tracking-widest'>Link / URL</label>
+                                        <input type="url" placeholder="https://..." className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} />
+                                    </div>
                                 </div>
                                 <button
                                     onClick={() => {
@@ -377,11 +388,13 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                             setMediaLinks(prev => [...prev, {name: newLinkName.trim(), url: newLinkUrl.trim()}]);
                                             setNewLinkName("");
                                             setNewLinkUrl("");
+                                        } else {
+                                            alert("Please fill in both the purpose and the URL to add a link.");
                                         }
                                     }}
-                                    className='px-4 py-2.5 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition whitespace-nowrap'
+                                    className='w-full md:w-auto px-10 py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-zinc-800 transition shadow-lg shadow-zinc-900/10'
                                 >
-                                    + Add Link
+                                    + Add Link to Knowledge
                                 </button>
                             </div>
                         </div>
