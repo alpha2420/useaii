@@ -232,7 +232,7 @@ async function startClient(ownerId: string) {
                     else if (textLower === "2" || textLower.includes("hindi")) selectedLang = "hindi";
                     else if (textLower === "3" || textLower.includes("hinglish")) selectedLang = "hinglish";
 
-                    if (selectedLang) {
+                    if (selectedLang && existingConvo) {
                         // Valid selection -> Save and acknowledge
                         await Conversation.findOneAndUpdate(
                             { ownerId, contactNumber },
