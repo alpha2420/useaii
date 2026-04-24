@@ -23,6 +23,9 @@ const userSchema = new Schema<IUser>(
         },
         // null = top-level owner account. Set to ownerId for sub-users.
         parentOwnerId: { type: String, default: null },
+        credits: { type: Number, default: 100000 }, // Tokens or Credits (e.g., 100k free start)
+        isSuperAdmin: { type: Boolean, default: false },
+        isActive: { type: Boolean, default: true },
     },
     { timestamps: true }
 );

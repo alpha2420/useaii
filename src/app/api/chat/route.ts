@@ -13,6 +13,8 @@ import { getEmbedding, cosineSimilarity, rankAndFilterChunks } from "@/lib/embed
 import KnowledgeChunk from "@/model/knowledge.model";
 import { classifyIntent, getIntentReply } from "@/lib/intentClassifier";
 import { matchHardcodedIntent } from "@/lib/hardcodedRules";
+import User from "@/model/user.model";
+import { logUsage } from "@/lib/usage";
 
 // Optional Rate Limiting Setup
 let ratelimit: Ratelimit | null = null;
@@ -35,6 +37,13 @@ export async function POST(req: NextRequest) {
                 { message: "message and owner id is required" },
                 { status: 400 }
             )
+        }
+
+        await connectDb();
+        const user = await User.findById(ownerId);
+        if (user && user.credits <= 0 && !user.isSuperAdmin) {
+            console.log(`[Chat] User ${ownerId} has no credits remaining.`);
+            return NextResponse.json({ reply: "Sorry, I've reached my daily limit for today. Please try again later." });
         }
 
         // ── Token Compression: 2 messages of memory max ──
@@ -290,6 +299,16 @@ Q:${cleanMessage}`;
                     if (geminiRes) {
                         const usage = (geminiRes as any).usageMetadata;
                         console.log(`[Chat] Gemini success | ${modelName} | Tokens: In=${usage?.promptTokenCount}, Out=${usage?.candidatesTokenCount}, Total=${usage?.totalTokenCount}`);
+                        
+                        // Log usage to DB
+                        logUsage({
+                            userId: ownerId,
+                            model: modelName,
+                            promptTokens: usage?.promptTokenCount || 0,
+                            completionTokens: usage?.candidatesTokenCount || 0,
+                            type: "chat"
+                        });
+                        
                         break;
                     }
                 } catch (apiError: unknown) {
@@ -341,6 +360,15 @@ Q:${cleanMessage}`;
                     aiSuccess = true;
                     const usage = completion.usage;
                     console.log(`[Chat] OpenAI success | Tokens: In=${usage?.prompt_tokens}, Out=${usage?.completion_tokens}, Total=${usage?.total_tokens}`);
+
+                    // Log usage to DB
+                    logUsage({
+                        userId: ownerId,
+                        model: openaiModel,
+                        promptTokens: usage?.prompt_tokens || 0,
+                        completionTokens: usage?.completion_tokens || 0,
+                        type: "chat"
+                    });
                 }
             } catch (openaiError: unknown) {
                 console.error(`[Chat] OpenAI fallback failed:`, (openaiError as any)?.message || openaiError);
