@@ -116,6 +116,9 @@ const input=document.querySelector("#chat-input")
 const sendBtn=document.querySelector("#chat-send")
 const messageArea=document.querySelector("#chat-messages")
 
+// In-memory history for lightweight memory (last 2 exchanges = 4 messages)
+const chatHistory = [];
+
 function addMessage(text,from){
     const bubble=document.createElement("div")
     bubble.innerHTML=text
@@ -133,8 +136,6 @@ function addMessage(text,from){
       boxShadow: from === "user" ? "none" : "0 1px 3px rgba(0,0,0,0.07)",
       wordBreak: "break-word",
       letterSpacing: "0.01em",
-
-      /* bubble direction polish */
       borderTopRightRadius: from === "user" ? "4px" : "14px",
       borderTopLeftRadius: from === "user" ? "14px" : "4px",
     })
@@ -151,6 +152,9 @@ sendBtn.onclick=async ()=>{
     addMessage(text,"user")
     input.value=""
 
+    // Track user message in history
+    chatHistory.push({ role: "user", parts: [{ text }] });
+
     const typing=document.createElement("div")
     typing.innerHTML="Typing..."
     Object.assign(typing.style,{
@@ -166,13 +170,21 @@ sendBtn.onclick=async ()=>{
         method:"POST",
         headers:{"content-Type":"application/json"},
         body:JSON.stringify({
-            ownerId,message:text
+            ownerId,
+            message: text,
+            // Send last 4 messages (2 user + 2 bot) for lightweight memory
+            history: chatHistory.slice(-4)
         })
     })
 
     const data=await response.json()
     messageArea.removeChild(typing)
-    addMessage(data|| "something went wrong","ai")
+    const replyText = data || "Something went wrong";
+    addMessage(replyText,"ai")
+
+    // Track bot reply in history, keep only last 4 entries total
+    chatHistory.push({ role: "model", parts: [{ text: replyText }] });
+    if (chatHistory.length > 8) chatHistory.splice(0, chatHistory.length - 8);
 
 } catch (error) {
     console.log(error)
@@ -182,7 +194,6 @@ sendBtn.onclick=async ()=>{
     addMessage("Something went wrong, please try again.","ai")
 }
 }
-
 
 
 

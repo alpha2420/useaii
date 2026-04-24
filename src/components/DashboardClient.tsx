@@ -27,14 +27,20 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
     const [supportEmail, setSupportEmail] = useState("")
     const [knowledge, setKnowledge] = useState("")
     const [whatsappNumber, setWhatsappNumber] = useState("")
+    const [agentInstructions, setAgentInstructions] = useState("")
     const [mediaLinks, setMediaLinks] = useState<{name: string, url: string}[]>([])
     const [newLinkName, setNewLinkName] = useState("")
     const [newLinkUrl, setNewLinkUrl] = useState("")
+    const [aiOverrides, setAiOverrides] = useState<{topic: string, response: string}[]>([])
+    const [newOverrideTopic, setNewOverrideTopic] = useState("")
+    const [newOverrideResponse, setNewOverrideResponse] = useState("")
+
     const [loading, setLoading] = useState(false)
     const [saved, setSaved] = useState(false)
 
     // Upload state
     const [uploadingPdf, setUploadingPdf] = useState(false)
+    const [refining, setRefining] = useState(false)
     
     // Test Bot state
     const [testMessage, setTestMessage] = useState("")
@@ -64,7 +70,16 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
     const handleSettings = async () => {
         setLoading(true)
         try {
-            const result = await axios.post("/api/settings", { ownerId, businessName, supportEmail, knowledge, whatsappNumber, mediaLinks })
+            const result = await axios.post("/api/settings", { 
+                ownerId, 
+                businessName, 
+                supportEmail, 
+                knowledge, 
+                whatsappNumber, 
+                agentInstructions,
+                mediaLinks,
+                aiOverrides 
+            })
             console.log(result.data)
             setLoading(false)
             setSaved(true)
@@ -85,7 +100,9 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                         setSupportEmail(result.data.supportEmail || "")
                         setKnowledge(result.data.knowledge || "")
                         setWhatsappNumber(result.data.whatsappNumber || "")
+                        setAgentInstructions(result.data.agentInstructions || "")
                         setMediaLinks(result.data.mediaLinks || [])
+                        setAiOverrides(result.data.aiOverrides || [])
                     }
                 } catch (error) {
                     console.log(error)
@@ -210,16 +227,53 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             if (res.data.text) {
-                setKnowledge(prev => prev + `\n\n--- [PDF Content: ${file.name}] ---\n\n${res.data.text}`);
+                const pdfContent = `\n\n--- [PDF Content: ${file.name}] ---\n\n${res.data.text}`;
+                const updatedKnowledge = knowledge + pdfContent;
+                
+                // 1. Update the UI textarea
+                setKnowledge(updatedKnowledge);
+
+                // 2. Immediately auto-save to trigger RAG chunking pipeline
+                setLoading(true);
+                await axios.post("/api/settings", {
+                    ownerId,
+                    businessName,
+                    supportEmail,
+                    knowledge: updatedKnowledge,
+                    whatsappNumber,
+                    mediaLinks
+                });
+                setSaved(true);
+                setTimeout(() => setSaved(false), 3000);
+                setLoading(false);
+                console.log("[PDF] Knowledge auto-saved and RAG chunks indexed.");
             }
         } catch (err) {
             console.error("Failed to parse PDF", err);
             alert("Failed to extract text from PDF document");
+            setLoading(false);
         } finally {
             setUploadingPdf(false);
             e.target.value = ''; // Reset input
         }
     }
+
+    const handleRefineKnowledge = async () => {
+        if (!knowledge.trim() || knowledge.length < 20) return;
+        setRefining(true);
+        try {
+            const res = await axios.post("/api/knowledge/refine", { text: knowledge });
+            if (res.data.refinedText) {
+                setKnowledge(res.data.refinedText);
+            }
+        } catch (err: any) {
+            console.error("Refinement failed", err);
+            const msg = err.response?.data?.message || err.message || "Unknown error";
+            alert(`Failed to refine knowledge base: ${msg}`);
+        } finally {
+            setRefining(false);
+        }
+    };
 
     const handleTestChat = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -328,6 +382,17 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                             </div>
                         </div>
                         <div className='mb-10'>
+                            <h1 className='text-lg font-medium mb-4'>Agent Instructions</h1>
+                            <p className='text-sm text-zinc-500 mb-4'>Custom rules for how the AI should behave (e.g. "Always be professional", "Mention current discounts").</p>
+                            <textarea 
+                                className='w-full h-32 rounded-xl border border-zinc-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' 
+                                placeholder="Example: 'Speak in a friendly tone', 'Focus on booking meetings', 'Don't give technical details'"
+                                onChange={(e) => setAgentInstructions(e.target.value)} 
+                                value={agentInstructions} 
+                            />
+                        </div>
+
+                        <div className='mb-10'>
                             <h1 className='text-lg font-medium mb-4'>Knowledge Base</h1>
                             <p className='text-sm text-zinc-500 mb-4'>Add FAQs, policies, delivery info, refunds, or upload PDFs.</p>
                             <div className='space-y-4'>
@@ -340,8 +405,59 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                         </div>
                                         <input type="file" accept="application/pdf" className='hidden' onChange={handleFileUpload} disabled={uploadingPdf} />
                                     </label>
-                                    <span className='text-xs text-zinc-400 max-w-[200px]'>Extracted text will be appended automatically above.</span>
+
+                                    <button 
+                                        type="button"
+                                        onClick={handleRefineKnowledge}
+                                        disabled={refining || !knowledge.trim()}
+                                        className={`px-4 py-2 border border-violet-200 rounded-lg text-sm transition ${refining ? 'bg-violet-50 text-violet-400' : 'bg-violet-50 hover:bg-violet-100 text-violet-700'}`}
+                                    >
+                                        {refining ? 'Restructuring...' : '✨ AI Refine (Beta)'}
+                                    </button>
+
+                                    <span className='text-xs text-zinc-400 max-w-[150px]'>Structure messy text into Q&A for better accuracy.</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className='mb-10'>
+                            <h1 className='text-lg font-medium mb-4 text-violet-700'>✨ AI Overrides (Rules)</h1>
+                            <p className='text-sm text-zinc-500 mb-4'>Define specific responses for certain keywords to bypass AI and save costs.</p>
+                            
+                            <div className='space-y-3 mb-4'>
+                                {aiOverrides.map((override, idx) => (
+                                    <div key={idx} className='bg-violet-50/50 border border-violet-100 rounded-lg p-3'>
+                                        <div className='flex items-start justify-between'>
+                                            <div className='pr-4'>
+                                                <p className='text-xs font-bold text-violet-600 uppercase tracking-wider'>Topic: {override.topic}</p>
+                                                <p className='text-sm text-zinc-800 mt-1'>{override.response}</p>
+                                            </div>
+                                            <button onClick={() => setAiOverrides(prev => prev.filter((_, i) => i !== idx))} className='text-red-500 hover:text-red-700 text-sm font-medium px-2'>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {aiOverrides.length === 0 && (
+                                    <p className='text-xs text-zinc-400 italic'>No custom rules added yet.</p>
+                                )}
+                            </div>
+
+                            <div className='space-y-2'>
+                                <input type="text" placeholder="Trigger Keyword (e.g. 'refund' or 'timing')" className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50' value={newOverrideTopic} onChange={e => setNewOverrideTopic(e.target.value)} />
+                                <textarea placeholder="Fixed Response (The bot will say exactly this)" className='w-full h-20 rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50' value={newOverrideResponse} onChange={e => setNewOverrideResponse(e.target.value)} />
+                                <button
+                                    onClick={() => {
+                                        if(newOverrideTopic.trim() && newOverrideResponse.trim()) {
+                                            setAiOverrides(prev => [...prev, {topic: newOverrideTopic.trim(), response: newOverrideResponse.trim()}]);
+                                            setNewOverrideTopic("");
+                                            setNewOverrideResponse("");
+                                        }
+                                    }}
+                                    className='w-full px-4 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition'
+                                >
+                                    + Add AI Rule Override
+                                </button>
                             </div>
                         </div>
 

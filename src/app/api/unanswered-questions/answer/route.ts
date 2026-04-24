@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
         // Append Q&A to the knowledge base
         const qaPair = `\n\nQ: ${question.question}\nA: ${answer}`;
         
-        // Find existing settings or create new one
         let updatedSettings = await Settings.findOne({ ownerId });
         if (!updatedSettings) {
             updatedSettings = new Settings({ ownerId, knowledge: "" });
@@ -41,6 +40,28 @@ export async function POST(req: NextRequest) {
         
         updatedSettings.knowledge = (updatedSettings.knowledge || "") + qaPair;
         await updatedSettings.save();
+
+        // Re-index RAG chunks so the new answer is immediately searchable
+        try {
+            const KnowledgeChunk = (await import("@/model/knowledge.model")).default;
+            const { getEmbedding, chunkText } = await import("@/lib/embeddings");
+            const newChunks = chunkText(qaPair, 500);
+            const chunkDocs = await Promise.all(
+                newChunks.map(async (text) => {
+                    try {
+                        const embedding = await getEmbedding(text);
+                        return { ownerId, chunkText: text, embedding };
+                    } catch { return null; }
+                })
+            );
+            const valid = chunkDocs.filter(c => c !== null);
+            if (valid.length > 0) {
+                await KnowledgeChunk.insertMany(valid);
+                console.log(`[RAG] Re-indexed ${valid.length} new chunk(s) after answer submission.`);
+            }
+        } catch (ragErr) {
+            console.error("[RAG] Re-index error after answer:", ragErr);
+        }
 
         return NextResponse.json({
             question,
