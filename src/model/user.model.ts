@@ -9,6 +9,9 @@ interface IUser {
     role: UserRole;
     // For sub-users: which owner's account they belong to
     parentOwnerId: string | null;
+    credits: number;
+    isSuperAdmin: boolean;
+    isActive: boolean;
 }
  
 const userSchema = new Schema<IUser>(
