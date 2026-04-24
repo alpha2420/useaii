@@ -41,7 +41,6 @@ export interface IConversation extends Document {
     notes: string;
     tags: string[];
     isAiPaused: boolean;
-    preferredLanguage: string | null;
     lastMessageAt: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -113,11 +112,6 @@ const ConversationSchema = new Schema<IConversation>(
         notes: { type: String, default: "" },
         tags: { type: [String], default: [] },
         isAiPaused: { type: Boolean, default: false },
-        preferredLanguage: {
-            type: String,
-            enum: ["english", "hindi", "hinglish", null],
-            default: null,
-        },
         lastMessageAt: { type: Date, default: Date.now },
     },
     { timestamps: true }

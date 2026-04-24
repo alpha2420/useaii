@@ -14,7 +14,6 @@ import { analyzeConversation } from './src/lib/analyzeConversation';
 import { buildMemoryContext } from './src/lib/buildMemoryContext';
 import { getCachedReply, setCachedReply } from './src/lib/responseCache';
 import { preprocessMessage } from './src/lib/preprocessMessage';
-import { getRelevantContext } from './src/lib/rag';
 
 if (typeof global.fetch === 'undefined') {
     global.fetch = fetch as any;
@@ -74,12 +73,8 @@ async function pollUsers() {
     }
 }
 
-let isPollingPendingMessages = false;
-
 // ─── Poll for outbound messages queued from the dashboard ────────────────────
 async function pollPendingMessages() {
-    if (isPollingPendingMessages) return;
-    isPollingPendingMessages = true;
     try {
         const pending = await PendingMessage.find({ status: "pending" }).lean();
         for (const msg of pending) {
@@ -106,8 +101,6 @@ async function pollPendingMessages() {
         }
     } catch (error) {
         console.error("[Worker] Pending message poll error:", error);
-    } finally {
-        isPollingPendingMessages = false;
     }
 }
 
@@ -205,68 +198,6 @@ async function startClient(ownerId: string) {
             const setting = await Settings.findOne({ ownerId }).lean();
             if (!setting) return;
 
-            // ── 3b. Language Onboarding Flow ──────────────────────────────
-            // Check if bot has already sent the language selection prompt
-            // We detect this by looking at the bot's own messages
-            if (!existingConvo?.preferredLanguage) {
-                const hasAskedLanguage = existingConvo?.messages?.some(
-                    (m: any) => m.role === 'bot' && m.text.includes('1️⃣ English')
-                );
-
-                if (!hasAskedLanguage) {
-                    // Has NOT been asked yet -> Send the language selection prompt NOW
-                    const welcomeMsg = `Welcome to *${setting.businessName || "us"}*! / नमस्ते! 🙌\n\nPlease select your preferred language to continue / कृपया जारी रखने के लिए अपनी पसंदीदा भाषा चुनें:\n\n1️⃣ English\n2️⃣ Hindi (हिंदी)\n3️⃣ Hinglish`;
-                    await msg.reply(welcomeMsg);
-                    await Conversation.findOneAndUpdate(
-                        { ownerId, contactNumber },
-                        { $push: { messages: { role: "bot", text: welcomeMsg, timestamp: new Date() } } }
-                    );
-                    console.log(`[Worker] Language prompt sent to ${contactNumber}`);
-                    return; // Wait for their reply
-                } else {
-                    // HAS been asked -> Parse their reply
-                    const textLower = msg.body.trim().toLowerCase();
-                    let selectedLang: string | null = null;
-
-                    if (textLower === "1" || textLower.includes("english")) selectedLang = "english";
-                    else if (textLower === "2" || textLower.includes("hindi")) selectedLang = "hindi";
-                    else if (textLower === "3" || textLower.includes("hinglish")) selectedLang = "hinglish";
-
-                    if (selectedLang && existingConvo) {
-                        // Valid selection -> Save and acknowledge
-                        await Conversation.findOneAndUpdate(
-                            { ownerId, contactNumber },
-                            { $set: { preferredLanguage: selectedLang } }
-                        );
-                        existingConvo.preferredLanguage = selectedLang;
-
-                        const ackMsg = selectedLang === "hindi"
-                            ? "धन्यवाद! हम हिंदी में बातचीत जारी रखेंगे। मैं आपकी कैसे मदद कर सकता/सकती हूँ?"
-                            : selectedLang === "hinglish"
-                            ? "Done! Hum Hinglish mein baat karenge. 😊 Bolo, kya help chahiye?"
-                            : "Great! We'll continue in English. 😊 How can I help you today?";
-
-                        await msg.reply(ackMsg);
-                        await Conversation.findOneAndUpdate(
-                            { ownerId, contactNumber },
-                            { $push: { messages: { role: "bot", text: ackMsg, timestamp: new Date() } } }
-                        );
-                        console.log(`[Worker] Language set to '${selectedLang}' for ${contactNumber}`);
-                        return; // Done with onboarding — they can send their real question next
-
-                    } else {
-                        // Invalid reply -> Ask again
-                        const retryMsg = `कृपया 1, 2, या 3 में से एक option चुनें / Please choose a valid option:\n\n1️⃣ English\n2️⃣ Hindi (हिंदी)\n3️⃣ Hinglish`;
-                        await msg.reply(retryMsg);
-                        await Conversation.findOneAndUpdate(
-                            { ownerId, contactNumber },
-                            { $push: { messages: { role: "bot", text: retryMsg, timestamp: new Date() } } }
-                        );
-                        return;
-                    }
-                }
-            }
-
             // ── 4. Build Memory Context ───────────────────────────────────
             const memoryContext = await buildMemoryContext(existingConvo, ownerId);
 
@@ -277,64 +208,71 @@ async function startClient(ownerId: string) {
 
             const mediaLinks = setting.mediaLinks || [];
             const MEDIA_LINKS_CONTEXT = mediaLinks.length > 0
-                ? `\n\n--- MEDIA & PHOTO LINKS ---\n${mediaLinks.map((l: any) => `${l.name} -> ${l.url}`).join("\n")}`
+                ? `\n\n--- MEDIA & PHOTO LINKS ---\n${mediaLinks.map((l: any) => `${l.name} -> ${l.url}`).join("\n")}\nIMPORTANT RULE: If a customer asks to see a photo, product, or link that matches an item above, you MUST include its exact URL naturally in your reply. Do not invent links.`
                 : "";
 
             // Truncate knowledge to 800 chars max to avoid large context
             const knowledgeTrimmed = (setting.knowledge || "not provided").slice(0, 800);
 
-            // Fetch specific relevant context via Vector Search (RAG)
-            const ragContext = await getRelevantContext(cleanMessage, ownerId);
-
-            const KNOWLEDGE = `name:${setting.businessName || ""} | email:${setting.supportEmail || ""} | wa:${setting.whatsappNumber || ""} | info:${knowledgeTrimmed}\n\n${ragContext}${MEDIA_LINKS_CONTEXT}`;
+            const KNOWLEDGE = `name:${setting.businessName || ""} | email:${setting.supportEmail || ""} | wa:${setting.whatsappNumber || ""} | info:${knowledgeTrimmed}${MEDIA_LINKS_CONTEXT}`;
 
             const AGENT_INSTRUCTIONS = setting.agentInstructions
                 ? `\nSPECIAL INSTRUCTIONS FROM THE BUSINESS OWNER (follow strictly):\n${setting.agentInstructions}\n`
                 : "";
 
-            // Cache is disabled so bot uses latest KB
-            // const cachedReply = await getCachedReply(ownerId, cleanMessage);
-            // if (cachedReply) {
-            //     await msg.reply(cachedReply);
-            //     // Still save the message to conversation history
-            //     await Conversation.findOneAndUpdate(
-            //         { ownerId, contactNumber },
-            //         {
-            //             $push: { messages: { role: "bot", text: cachedReply, timestamp: new Date() } },
-            //             $set: { lastMessageAt: new Date() },
-            //         }
-            //     );
-            //     console.log(`[Worker] Cache hit for ${contactNumber} — no AI call made.`);
-            //     return;
-            // }
-
-            const languageRule = existingConvo?.preferredLanguage === "hindi" 
-                ? "STRICT LANGUAGE RULE: You MUST reply exclusively in Hindi using the Devanagari script." 
-                : existingConvo?.preferredLanguage === "hinglish" 
-                ? "STRICT LANGUAGE RULE: You MUST reply exclusively in Hinglish (Hindi written in the English alphabet, conversational)." 
-                : "STRICT LANGUAGE RULE: You MUST reply exclusively in English.";
+            // ── 5. Check Response Cache (skip AI if this question was asked before) ──
+            const cachedReply = await getCachedReply(ownerId, cleanMessage);
+            if (cachedReply) {
+                await msg.reply(cachedReply);
+                // Still save the message to conversation history
+                await Conversation.findOneAndUpdate(
+                    { ownerId, contactNumber },
+                    {
+                        $push: { messages: { role: "bot", text: cachedReply, timestamp: new Date() } },
+                        $set: { lastMessageAt: new Date() },
+                    }
+                );
+                console.log(`[Worker] Cache hit for ${contactNumber} — no AI call made.`);
+                return;
+            }
 
             // ── 6. Build prompt and call AI ───────────────────────────────
-            const prompt = `You are a warm, highly empathetic, and conversational human support agent. Reply JSON: {"canAnswer":true/false,"reply":"answer"}
-RULES:
-1. Speak in a natural, polite, and friendly human voice. Match the customer's conversational tone.
-2. Be EXTREMELY short and direct. Max 1 sentence (under 15 words) UNLESS providing requested details. NO polite filler phrases (e.g. "Absolutely!", "I can help with that"). Just get straight to the point. Use 1 organic emoji. 
-3. NEVER send links, addresses, or pricing without being asked.
-4. STRICT LINK RULE: If the customer asks for a specific link (e.g. "send photos of hostel", "where is the location"), you MUST identify the ONE relevant link from the INFO and send only that. NEVER send multiple links at once. If you find multiple matches, ask for clarification (e.g., "Which hostel would you like photos for?").
-5. Answer ONLY the exact question asked and NOTHING else. Do not hallucinate links.
-6. ${languageRule}
+            const prompt = `WhatsApp support bot. JSON only: {"canAnswer":true/false,"reply":"answer"}
+RULES: 1 sentence max 12 words. No paragraphs. Direct answer only.
 ${AGENT_INSTRUCTIONS}${memoryContext}
-INFO: ${KNOWLEDGE}
+INFO:${KNOWLEDGE}
 Q: ${cleanMessage}`;
 
             let reply = "";
             let canAnswer = true;
             let aiSuccess = false;
 
-            // Try Gemini (Primary)
-            const geminiKey = process.env.GEMINI_API_KEY;
-            if (geminiKey) {
-                const ai = new GoogleGenAI({ apiKey: geminiKey as string });
+            // Try OpenAI
+            const openaiKey = process.env.OPENAI_API_KEY;
+            if (openaiKey && openaiKey !== "your_openai_api_key_here") {
+                try {
+                    const openai = new OpenAI({ apiKey: openaiKey });
+                    const completion = await openai.chat.completions.create({
+                        model: "gpt-4o-mini",
+                        messages: [{ role: 'user', content: prompt }],
+                        response_format: { type: 'json_object' },
+                        max_tokens: 120,
+                    });
+                    const content = completion.choices[0].message.content;
+                    if (content) {
+                        const parsed = JSON.parse(content);
+                        canAnswer = parsed.canAnswer !== false;
+                        reply = parsed.reply || "";
+                        aiSuccess = true;
+                        const usage = completion.usage;
+                        console.log(`[Worker] OpenAI success | Tokens: In=${usage?.prompt_tokens}, Out=${usage?.completion_tokens}, Total=${usage?.total_tokens}`);
+                    }
+                } catch (e) { console.error(`[Worker] OpenAI failed:`, e); }
+            }
+
+            // Fallback Gemini
+            if (!aiSuccess) {
+                const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
                 const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
                 for (const modelName of modelsToTry) {
                     try {
@@ -360,29 +298,6 @@ Q: ${cleanMessage}`;
                 }
             }
 
-            // Fallback OpenAI
-            const openaiKey = process.env.OPENAI_API_KEY;
-            if (!aiSuccess && openaiKey && openaiKey !== "your_openai_api_key_here") {
-                try {
-                    const openai = new OpenAI({ apiKey: openaiKey });
-                    const completion = await openai.chat.completions.create({
-                        model: "gpt-4o-mini",
-                        messages: [{ role: 'user', content: prompt }],
-                        response_format: { type: 'json_object' },
-                        max_tokens: 120,
-                    });
-                    const content = completion.choices[0].message.content;
-                    if (content) {
-                        const parsed = JSON.parse(content);
-                        canAnswer = parsed.canAnswer !== false;
-                        reply = parsed.reply || "";
-                        aiSuccess = true;
-                        const usage = completion.usage;
-                        console.log(`[Worker] OpenAI success | Tokens: In=${usage?.prompt_tokens}, Out=${usage?.completion_tokens}, Total=${usage?.total_tokens}`);
-                    }
-                } catch (e) { console.error(`[Worker] OpenAI failed:`, e); }
-            }
-
             if (!aiSuccess) {
                 await msg.reply("Hi! Our support assistant is temporarily unavailable. Please try again shortly. 🙏");
                 return;
@@ -396,10 +311,10 @@ Q: ${cleanMessage}`;
 
             if (reply) {
                 await msg.reply(reply);
-                // Cache disabled
-                // if (canAnswer) {
-                //     setCachedReply(ownerId, msg.body, reply).catch(() => {});
-                // }
+                // Save to cache so future identical questions skip AI entirely
+                if (canAnswer) {
+                    setCachedReply(ownerId, msg.body, reply).catch(() => {});
+                }
             }
 
             // ── 6. Save bot reply ─────────────────────────────────────────

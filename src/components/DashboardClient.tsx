@@ -42,7 +42,6 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         { role: 'bot', content: 'Hi! Test your settings here. How can I help you today?' }
     ])
     const [chatLoading, setChatLoading] = useState(false)
-    const [isResetting, setIsResetting] = useState(false)
 
     // Unanswered Questions state
     const [unansweredQuestions, setUnansweredQuestions] = useState<UnansweredQ[]>([])
@@ -205,16 +204,13 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         setUploadingPdf(true);
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("ownerId", ownerId || "");
 
         try {
             const res = await axios.post("/api/upload-pdf", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             if (res.data.text) {
-                // Append extracted PDF text to the knowledge box
-                setKnowledge(prev => (prev ? prev + `\n\n--- [PDF: ${file.name}] ---\n\n${res.data.text}` : res.data.text));
-                alert(`✅ PDF "${file.name}" extracted successfully! The content has been added to your Knowledge Base. Click Save to apply.`);
+                setKnowledge(prev => prev + `\n\n--- [PDF Content: ${file.name}] ---\n\n${res.data.text}`);
             }
         } catch (err) {
             console.error("Failed to parse PDF", err);
@@ -224,7 +220,6 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
             e.target.value = ''; // Reset input
         }
     }
-
 
     const handleTestChat = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -238,7 +233,6 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
         try {
             const res = await axios.post("/api/chat", {
                 ownerId,
-                contactNumber: "web-sandbox",
                 history: chatHistory.map(m => ({
                     role: m.role === 'user' ? 'user' : 'model',
                     parts: [{ text: m.content }]
@@ -254,20 +248,6 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
             setChatLoading(false);
         }
     }
-
-    const handleResetChat = async () => {
-        if (!ownerId) return;
-        setIsResetting(true);
-        try {
-            await axios.post("/api/chat/reset", { ownerId, contactNumber: "web-sandbox" });
-            setChatHistory([]);
-            setTestMessage("");
-        } catch (error) {
-            console.error("Reset error:", error);
-        } finally {
-            setIsResetting(false);
-        }
-    };
 
     const formatTimeAgo = (dateStr: string) => {
         const diff = Date.now() - new Date(dateStr).getTime()
@@ -386,16 +366,10 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                 )}
                             </div>
 
-                            <div className='flex flex-col gap-4'>
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                                    <div className='space-y-1.5'>
-                                        <label className='text-[10px] font-bold text-zinc-400 ml-1 uppercase tracking-widest'>Section/Purpose</label>
-                                        <input type="text" placeholder="e.g. 'Girls Hostel' or 'Main Location'" className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkName} onChange={e => setNewLinkName(e.target.value)} />
-                                    </div>
-                                    <div className='space-y-1.5'>
-                                        <label className='text-[10px] font-bold text-zinc-400 ml-1 uppercase tracking-widest'>Link / URL</label>
-                                        <input type="url" placeholder="https://..." className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} />
-                                    </div>
+                            <div className='flex gap-2 items-center'>
+                                <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-2'>
+                                    <input type="text" placeholder="Label (e.g., 'Pricing PDF' or 'Hostel Photo')" className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkName} onChange={e => setNewLinkName(e.target.value)} />
+                                    <input type="url" placeholder="https://..." className='w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/80' value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} />
                                 </div>
                                 <button
                                     onClick={() => {
@@ -403,13 +377,11 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                                             setMediaLinks(prev => [...prev, {name: newLinkName.trim(), url: newLinkUrl.trim()}]);
                                             setNewLinkName("");
                                             setNewLinkUrl("");
-                                        } else {
-                                            alert("Please fill in both the purpose and the URL to add a link.");
                                         }
                                     }}
-                                    className='w-full md:w-auto px-10 py-3 bg-zinc-900 text-white text-sm font-bold rounded-xl hover:bg-zinc-800 transition shadow-lg shadow-zinc-900/10'
+                                    className='px-4 py-2.5 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition whitespace-nowrap'
                                 >
-                                    + Add Link to Knowledge
+                                    + Add Link
                                 </button>
                             </div>
                         </div>
@@ -655,21 +627,12 @@ function DashboardClient({ ownerId }: { ownerId: string }) {
                     className='w-full bg-white rounded-2xl shadow-xl border border-zinc-200 overflow-hidden sticky top-28 flex flex-col'
                     style={{ height: '700px' }}
                 >
-                    <div className="flex items-center justify-between p-4 border-b border-white/5 bg-black/20">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <h3 className="font-medium text-white/90">Test Your Bot</h3>
+                    <div className='bg-black text-white px-6 py-4 flex justify-between items-center shrink-0'>
+                        <div className='font-medium flex items-center gap-3'>
+                            <span className='w-2 h-2 rounded-full bg-emerald-400 animate-pulse'></span>
+                            Test Your Bot
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleResetChat}
-                                disabled={isResetting}
-                                className="px-2 py-1 text-[10px] uppercase tracking-wider font-bold rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 transition-all border border-white/5"
-                            >
-                                {isResetting ? "Resetting..." : "Reset Chat"}
-                            </button>
-                            <span className="text-[10px] uppercase tracking-widest font-bold text-white/30">Sandbox</span>
-                        </div>
+                        <span className='text-xs opacity-60'>Sandbox</span>
                     </div>
 
                     <div className='flex-1 overflow-y-auto p-6 space-y-4 bg-zinc-50 flex flex-col'>
