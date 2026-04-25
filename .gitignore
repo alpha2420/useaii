@@ -49,3 +49,4 @@ dev.log
 
 # Scratch scripts (logs/testing)
 scratch/
+frontend/.next

@@ -60,7 +60,7 @@
       justify-content:space-between;
       align-items:center;
     ">
-    <span>Customer Support</span>
+    <span class="business-name">Customer Support</span>
      <span id="chat-close" style="cursor:pointer;font-size:16px">╳</span>
     </div>
 
@@ -103,8 +103,20 @@
 
     document.body.appendChild(box)
 
-button.onclick=()=>{
-    box.style.display=box.style.display==="none"?"flex":"none"
+button.onclick=async ()=>{
+    if (box.style.display === "none") {
+        // Fetch latest settings silently when opening to ensure it's fresh
+        try {
+            const res = await fetch(`${api_Url.replace("/chat", "/settings-public")}?ownerId=${ownerId}`);
+            const settings = await res.data;
+            if (settings && settings.businessName) {
+                box.querySelector(".business-name").innerText = settings.businessName;
+            }
+        } catch (e) {}
+        box.style.display = "flex";
+    } else {
+        box.style.display = "none";
+    }
 }
 
 document.querySelector("#chat-close").onclick=()=>{

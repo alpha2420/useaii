@@ -37,8 +37,9 @@ function EmbedClient({ ownerId }: { ownerId: string }) {
         return () => clearInterval(interval);
     }, [ownerId])
 
+    const version = "1.0.2"; // Increment this when you make major changes
     const embedCode = `<script 
-    src="${process.env.NEXT_PUBLIC_APP_URL}/chatBot.js" 
+    src="${process.env.NEXT_PUBLIC_APP_URL}/chatBot.js?v=${version}" 
     data-owner-id="${ownerId}">
 </script> `
     const copyCode = () => {
