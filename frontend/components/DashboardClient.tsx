@@ -628,7 +628,7 @@ function DashboardClient({ ownerId, userName, userEmail }: { ownerId: string, us
                                     whileHover={{ scale: 1.03 }}
                                     whileTap={{ scale: 0.97 }}
                                     disabled={loading}
-                                    onClick={handleSettings}
+                                    onClick={() => handleSettings()}
                                     className="px-7 py-3 rounded-xl bg-black text-white text-sm font-medium hover:bg-zinc-800 transition disabled:opacity-60"
                                 >
                                     {loading ? "Saving..." : "Save Settings"}
