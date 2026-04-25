@@ -1,0 +1,68 @@
+================================================================================
+                    CONVERRA AI - CRM SYSTEM ARCHITECTURE REPORT
+================================================================================
+
+1. OVERVIEW
+--------------------------------------------------------------------------------
+Converra AI is a high-performance, human-in-the-loop CRM system designed to
+automate business-to-customer communication via WhatsApp. It combines 
+Real-time messaging, AI automation, and advanced lead intelligence.
+
+2. CORE SYSTEM ARCHITECTURE
+--------------------------------------------------------------------------------
+The system operates as two independent engines connected by a shared MongoDB
+database:
+
+A. WEB DASHBOARD (The Face)
+   - Technologies: Next.js 16, Tailwind CSS, TypeScript.
+   - Purpose: Management interface for business owners to see chats,
+     configure AI settings, and manage their knowledge base.
+   - Live Updates: Uses "optimistic UI" and polling to show messages the 
+     moment they arrive.
+
+B. BACKGROUND WORKER (The Brain)
+   - Technologies: Node.js, WhatsApp-Web.js, Puppeteer.
+   - Purpose: Runs 24/7 on the VPS. Handles the active WhatsApp connection,
+     listens for messages, calls AI, and sends replies.
+
+3. THE AI REPLIER WORKFLOW
+--------------------------------------------------------------------------------
+When a customer sends a message:
+1. Capture: Worker detects the message.
+2. Pre-process: Cleans slang, emojis, and filler words to save AI costs.
+3. Cache Check: If the same question was asked before, sends a saved answer
+   (0.0ms delay, $0 cost).
+4. Smart Routing: Calls OpenAI (GPT-4o). If OpenAI is down, instantly 
+   switches to Google Gemini Flash for 100% uptime.
+5. Guardrails: If the AI is unsure (Low Confidence), it creates an 
+   "Unanswered Question" log for the owner instead of hallucinating.
+
+4. CRM INTELLIGENCE & MEMORY
+--------------------------------------------------------------------------------
+The CRM does not just "chat"; it builds a profile for every contact:
+- AI Extraction: Automatically identifies and saves the Customer's Name,
+  Budget, Location, and specific needs.
+- Lead Scoring: Categorizes every user as "Hot," "Warm," or "Cold" based
+  on their buying intent.
+- AI Summarization: Generates a 1-sentence summary of the entire chat
+  history so the owner can catch up in seconds.
+
+5. CONTROL MODES
+--------------------------------------------------------------------------------
+- AUTOMATED MODE: AI handles everything based on the Knowledge Base.
+- MANUAL MODE (AI Paused): The owner can "Pause AI" with one click to take
+  over the conversation manually. The dashboard allows the owner to send
+  messages through the bot's WhatsApp session.
+
+6. DATA & SECURITY
+--------------------------------------------------------------------------------
+- Persistence: All messages and analysis are stored in MongoDB.
+- Usage Tracking: A Super Admin portal monitors token consumption per user
+  to manage operational costs and credit balances.
+- Role-Based Access: Secure authentication ensures only authorized owners
+  can see their private business data.
+
+================================================================================
+Report Generated for Converra AI
+System Status: Operational
+================================================================================

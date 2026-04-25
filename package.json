@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "next dev frontend",
+    "build": "next build frontend",
+    "start": "next start frontend",
     "lint": "eslint",
-    "worker": "tsx --env-file=.env.local worker.ts"
+    "worker": "tsx --env-file=.env.local backend/worker.ts"
   },
   "dependencies": {
     "@google/genai": "^1.38.0",
+    "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-dialog": "^1.1.15",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",

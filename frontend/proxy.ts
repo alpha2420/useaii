@@ -1,0 +1,16 @@
+import { NextResponse } from "next/server";
+import { getSession } from "@shared/lib/getSession";
+
+export async function proxy() {
+    const session=await getSession()
+    if(!session){
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}`)
+    }
+    return NextResponse.next()
+}
+
+
+ 
+export const config = {
+  matcher: '/dashboard/:path*',
+}
