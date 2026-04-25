@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/mongodb";
-import Settings from "@/backend/models/Settings";
+import connectDb from "@shared/lib/db";
+import Settings from "@backend/models/settings.model";
 
 export async function GET(request: Request) {
     try {
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "ownerId required" }, { status: 400 });
         }
 
-        await connectToDatabase();
+        await connectDb();
         const settings = await Settings.findOne({ ownerId });
 
         if (!settings) {
