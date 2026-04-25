@@ -224,15 +224,26 @@ function DashboardClient({ ownerId, userName, userEmail }: { ownerId: string, us
             navigate.push("/login");
         }
     };
-    const fetchUnansweredQuestions = async () => {
+    useEffect(() => {
+        if (!ownerId) return;
+        
+        const uqInterval = setInterval(async () => {
+            await fetchUnansweredQuestions(true); // Background refresh
+        }, 15000); // Every 15 seconds
+
+        return () => clearInterval(uqInterval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ownerId]);
+
+    const fetchUnansweredQuestions = async (isBackground = false) => {
         try {
-            setUqLoading(true)
+            if (!isBackground) setUqLoading(true)
             const res = await axios.get(`/api/unanswered-questions?ownerId=${ownerId}`)
             setUnansweredQuestions(res.data)
         } catch (err) {
             console.error("Failed to fetch unanswered questions", err)
         } finally {
-            setUqLoading(false)
+            if (!isBackground) setUqLoading(false)
         }
     }
 
@@ -730,7 +741,13 @@ function DashboardClient({ ownerId, userName, userEmail }: { ownerId: string, us
                                     
                                 </div>
                                 <div className='text-left'>
-                                    <h2 className='text-lg font-semibold text-zinc-900'>Unanswered Questions</h2>
+                                    <div className='flex items-center gap-2'>
+                                        <h2 className='text-lg font-semibold text-zinc-800'>Unanswered Questions</h2>
+                                        <span className='flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold uppercase tracking-wider'>
+                                            <span className='w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse' />
+                                            Live
+                                        </span>
+                                    </div>
                                     <p className='text-xs text-zinc-400 mt-0.5'>Questions your bot couldn&apos;t answer from the knowledge base</p>
                                 </div>
                                 {unansweredQuestions.length > 0 && (
