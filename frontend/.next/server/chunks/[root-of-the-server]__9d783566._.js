@@ -1,3 +1,0 @@
-module.exports=[59639,(e,r,o)=>{r.exports=e.x("node:process",()=>require("node:process"))},2157,(e,r,o)=>{r.exports=e.x("node:fs",()=>require("node:fs"))},51615,(e,r,o)=>{r.exports=e.x("node:buffer",()=>require("node:buffer"))},24606,e=>{e.v(r=>Promise.all(["server/chunks/[root-of-the-server]__02bb6f64._.js","server/chunks/[root-of-the-server]__d233532c._.js"].map(r=>e.l(r))).then(()=>r(856)))}];
-
-//# sourceMappingURL=%5Broot-of-the-server%5D__9d783566._.js.map
