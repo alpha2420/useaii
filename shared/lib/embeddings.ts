@@ -18,7 +18,8 @@ export async function getEmbedding(text: string): Promise<number[]> {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: "models/text-embedding-004",
-                content: { parts: [{ text: text.replace(/\n/g, " ") }] }
+                content: { parts: [{ text: text.replace(/\n/g, " ") }] },
+                outputDimensionality: 3072
             })
         });
 
@@ -145,8 +146,8 @@ export function rankAndFilterChunks(
 ): string[] {
     if (!chunks.length) return [];
 
-    const cleanQuery = query.toLowerCase().replace(/[^\w\s]/g, "");
-    const queryWords = Array.from(new Set(cleanQuery.split(/\s+/).filter(w => w.length > 3)));
+    const cleanQuery = query.toLowerCase();
+    const queryWords = Array.from(new Set(cleanQuery.split(/[\s\-_,.]+/).filter(w => w.length >= 3)));
 
     const scored = chunks.map(chunk => {
         const text = chunk.text.toLowerCase();
@@ -169,6 +170,7 @@ export function rankAndFilterChunks(
         const penalty = (matches === 0 && queryWords.length > 0) ? -0.15 : 0;
 
         const finalScore = chunk.score + keywordBoost + specificityBoost + penalty;
+        console.log(`[RAG] Final Score: ${finalScore.toFixed(3)} | Text: ${chunk.text.slice(0, 50)}...`);
         return { ...chunk, finalScore };
     });
 
@@ -180,8 +182,8 @@ export function rankAndFilterChunks(
     const seenFingerprints = new Set<string>();
 
     for (const item of scored) {
-        // Discard low-relevance noise (Threshold increased to 0.78 for precision)
-        if (item.finalScore < 0.78) continue;
+        // Discard low-relevance noise (Threshold adjusted to 0.70 for better natural language matching)
+        if (item.finalScore < 0.70) continue;
 
         const fingerprint = item.text.trim().slice(0, 40).toLowerCase();
         if (seenFingerprints.has(fingerprint)) continue;
