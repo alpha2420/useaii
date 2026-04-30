@@ -200,7 +200,8 @@ async function startClient(ownerId: string) {
             if (!setting) return;
 
             // ── 4. Build Memory Context ───────────────────────────────────
-            const memoryContext = await buildMemoryContext(existingConvo, ownerId);
+            const bName = setting?.businessName || "us";
+            const memoryContext = await buildMemoryContext(existingConvo, ownerId, bName);
 
             // ── 4b. Pre-process the raw customer message ──────────────────
             // Clean slang, emojis, filler words before sending to AI
@@ -242,11 +243,11 @@ async function startClient(ownerId: string) {
             }
 
             // ── 6. Build prompt and call AI ───────────────────────────────
-            const bName = setting?.businessName || "us";
             const prompt = `Act as a helpful human representative for ${bName}. 
-NEVER mention that you are an AI or bot. Be warm and professional.
-Use the provided INFO to answer. If you cannot answer using ONLY the INFO, do not guess, set "canAnswer": false.
-Never make up information. Never repeat the same reply twice.
+NEVER mention that you are an AI. Be natural, concise, and professional.
+Use the provided INFO to answer. If you cannot answer using ONLY the INFO, set "canAnswer": false.
+Do NOT repeat greetings if you've already said hello. Avoid starting every message with "Hello [Name]".
+Never call the customer by the business name "${bName}".
 Output ONLY JSON: {"canAnswer": boolean, "reply": "string"}
 ${AGENT_INSTRUCTIONS}${memoryContext}
 INFO: ${KNOWLEDGE}

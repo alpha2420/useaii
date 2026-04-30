@@ -36,9 +36,9 @@ export async function analyzeConversation(
         .join("\n");
  
     const prompt = `Analyze this WhatsApp sales chat. Reply ONLY valid JSON, no markdown:
-{"intent":"buying|inquiry|complaint|spam|unknown","urgency":"high|medium|low","leadScore":"hot|warm|cold","extractedName":"name or null","extractedBudget":"budget or null","summary":"1 sentence","sentiment":"positive|neutral|negative","nextBestAction":"short action","nextBestActionType":"follow_up|send_pricing|close|nurture|escalate|none","enriched":{"company":null,"location":null,"email":null,"language":"English"}}
+{"intent":"buying|inquiry|complaint|spam|unknown","urgency":"high|medium|low","leadScore":"hot|warm|cold","extractedName":"Real person name only (set null if it's a business name or greeting)","extractedBudget":"budget or null","summary":"1 sentence","sentiment":"positive|neutral|negative","nextBestAction":"short action","nextBestActionType":"follow_up|send_pricing|close|nurture|escalate|none","enriched":{"company":null,"location":null,"email":null,"language":"English"}}
 
-CHAT:
+CHAT (B=Bot/Business, C=Customer):
 ${transcript}`;
  
     // 1. Try Gemini (Primary)

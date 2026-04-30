@@ -7,7 +7,8 @@ import AICorrection from "../models/ai-correction.model";
  */
 export async function buildMemoryContext(
     conversation: IConversation | null,
-    ownerId: string
+    ownerId: string,
+    businessName?: string
 ): Promise<string> {
     if (!conversation) return "";
 
@@ -17,7 +18,10 @@ export async function buildMemoryContext(
     const contactMemory: string[] = [];
 
     if (conversation.extractedName) {
-        contactMemory.push(`Name: ${conversation.extractedName}`);
+        // Guard: Don't use the name if it's identical to the business name
+        if (!businessName || conversation.extractedName.toLowerCase() !== businessName.toLowerCase()) {
+            contactMemory.push(`Name: ${conversation.extractedName}`);
+        }
     }
     if (conversation.enriched?.location) {
         contactMemory.push(`Location: ${conversation.enriched.location}`);
@@ -51,8 +55,8 @@ export async function buildMemoryContext(
         parts.push(`CUSTOMER:${contactMemory.join("|")}`);
     }
 
-    // ── 2. Recent conversation history (last 3 messages for context) ──────
-    const recentMessages = conversation.messages.slice(-3);
+    // ── 2. Recent conversation history (last 10 messages for context) ─────
+    const recentMessages = conversation.messages.slice(-10);
     if (recentMessages.length > 0) {
         const historyLines = recentMessages.map((m) => {
             const role =
@@ -86,5 +90,5 @@ export async function buildMemoryContext(
 
     if (parts.length === 0) return "";
 
-    return `[MEMORY]\n${parts.join("\n")}\nAddress customer by name if known. Never re-ask info you already have.`;
+    return `[MEMORY]\n${parts.join("\n")}\nAddress customer by name ONLY if it's a real person's name (not a business name). If you already have info, use it instead of asking again.`;
 }
