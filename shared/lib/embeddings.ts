@@ -102,7 +102,7 @@ export function parseEliteChunks(text: string): EliteChunk[] {
  * Splits a long text into smaller chunks for RAG processing.
  * Prioritizes Q&A units and smaller 250-char blocks.
  */
-export function chunkText(text: string, chunkSize: number = 250): string[] {
+export function chunkText(text: string, chunkSize: number = 300, overlap: number = 50): string[] {
     // 1. If text is already structured as Q&A, split by Q: marker to keep units whole
     if (text.includes("Q:")) {
         return text
@@ -111,28 +111,20 @@ export function chunkText(text: string, chunkSize: number = 250): string[] {
             .filter(t => t.length > 5);
     }
 
-    // 2. Otherwise, split by paragraphs with a smaller 250-char limit
+    // 2. Word-based chunking with overlap
     const chunks: string[] = [];
-    const paragraphs = text.split(/\n+/);
+    const words = text.split(/\s+/).filter(w => w.length > 0);
     
-    let currentChunk = "";
-    for (const p of paragraphs) {
-        const trimmedP = p.trim();
-        if (!trimmedP) continue;
+    if (words.length === 0) return chunks;
 
-        if ((currentChunk + trimmedP).length <= chunkSize) {
-            currentChunk += (currentChunk ? "\n" : "") + trimmedP;
-        } else {
-            if (currentChunk) chunks.push(currentChunk);
-            currentChunk = trimmedP;
-            
-            while (currentChunk.length > chunkSize) {
-                chunks.push(currentChunk.substring(0, chunkSize));
-                currentChunk = currentChunk.substring(chunkSize);
-            }
-        }
+    let i = 0;
+    while (i < words.length) {
+        const chunkWords = words.slice(i, i + chunkSize);
+        chunks.push(chunkWords.join(" "));
+        if (i + chunkSize >= words.length) break;
+        i += (chunkSize - overlap);
     }
-    if (currentChunk) chunks.push(currentChunk);
+    
     return chunks;
 }
 

@@ -245,7 +245,8 @@ async function startClient(ownerId: string) {
             const bName = setting?.businessName || "us";
             const prompt = `Act as a helpful human representative for ${bName}. 
 NEVER mention that you are an AI or bot. Be warm and professional.
-Use the provided INFO to answer. If you cannot answer, set "canAnswer": false.
+Use the provided INFO to answer. If you cannot answer using ONLY the INFO, do not guess, set "canAnswer": false.
+Never make up information. Never repeat the same reply twice.
 Output ONLY JSON: {"canAnswer": boolean, "reply": "string"}
 ${AGENT_INSTRUCTIONS}${memoryContext}
 INFO: ${KNOWLEDGE}
@@ -261,7 +262,7 @@ Q: ${cleanMessage}`;
                     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
                     const model = genAI.getGenerativeModel({ 
                         model: "gemini-2.0-flash",
-                        generationConfig: { maxOutputTokens: 120 }
+                        generationConfig: { maxOutputTokens: 120, temperature: 0.7 }
                     });
 
                     const geminiRes = await model.generateContent(prompt);
@@ -278,7 +279,7 @@ Q: ${cleanMessage}`;
                         
                         // Human-like proactive fallback
                         if (!canAnswer || !reply || reply.includes('{"')) {
-                            reply = `That's a great question! I'll need to check the specific details on that for you. I'll get back to you in just a few minutes! 😊`;
+                            reply = `I'll connect you with our team shortly. Someone will respond within a few minutes! 🙏`;
                             canAnswer = false;
                         }
 
@@ -302,6 +303,7 @@ Q: ${cleanMessage}`;
                         messages: [{ role: 'user', content: prompt }],
                         response_format: { type: 'json_object' },
                         max_tokens: 120,
+                        temperature: 0.7,
                     });
                     const content = completion.choices[0].message.content;
                     if (content) {
@@ -311,8 +313,7 @@ Q: ${cleanMessage}`;
 
                         // Proactive Fallback
                         if (!canAnswer || !reply || reply.includes('{"')) {
-                            const bName = setting?.businessName || "our business";
-                            reply = `I don't have a specific answer for that, but I can tell you all about ${bName}, our services, or pricing! What would you like to know? 😊`;
+                            reply = `I'll connect you with our team shortly. Someone will respond within a few minutes! 🙏`;
                             canAnswer = false;
                         }
 
@@ -336,6 +337,7 @@ Q: ${cleanMessage}`;
                         messages: [{ role: 'user', content: prompt }],
                         response_format: { type: 'json_object' },
                         max_tokens: 120,
+                        temperature: 0.7,
                     });
                     const content = completion.choices[0].message.content;
                     if (content) {
@@ -345,8 +347,7 @@ Q: ${cleanMessage}`;
 
                         // Proactive Fallback
                         if (!canAnswer || !reply || reply.includes('{"')) {
-                            const bName = setting?.businessName || "our business";
-                            reply = `I don't have a specific answer for that, but I can tell you all about ${bName}, our services, or pricing! What would you like to know? 😊`;
+                            reply = `I'll connect you with our team shortly. Someone will respond within a few minutes! 🙏`;
                             canAnswer = false;
                         }
 
@@ -370,6 +371,7 @@ Q: ${cleanMessage}`;
                         messages: [{ role: 'user', content: prompt }],
                         response_format: { type: 'json_object' },
                         max_tokens: 120,
+                        temperature: 0.7,
                     });
                     const content = completion.choices[0].message.content;
                     if (content) {
@@ -379,8 +381,7 @@ Q: ${cleanMessage}`;
 
                         // Proactive Fallback
                         if (!canAnswer || !reply || reply.includes('{"')) {
-                            const bName = setting?.businessName || "our business";
-                            reply = `I don't have a specific answer for that, but I can tell you all about ${bName}, our services, or pricing! What would you like to know? 😊`;
+                            reply = `I'll connect you with our team shortly. Someone will respond within a few minutes! 🙏`;
                             canAnswer = false;
                         }
 

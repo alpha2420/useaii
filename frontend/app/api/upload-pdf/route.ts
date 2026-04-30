@@ -22,8 +22,17 @@ export async function POST(req: NextRequest) {
                 resolve(NextResponse.json({ error: "Failed to parse PDF document" }, { status: 500 }));
             });
 
+function cleanPdfText(raw: string) {
+    return raw
+        .replace(/\n{3,}/g, '\n\n')     // remove excessive line breaks
+        .replace(/[^\x20-\x7E\n]/g, '') // remove weird characters
+        .replace(/[ \t]+/g, ' ')        // normalize horizontal spaces
+        .trim();
+}
+
             pdfParser.on("pdfParser_dataReady", () => {
-                const text = pdfParser.getRawTextContent().replace(/\r\n/g, "\n");
+                const rawText = pdfParser.getRawTextContent().replace(/\r\n/g, "\n");
+                const text = cleanPdfText(rawText);
                 resolve(NextResponse.json({ text }));
             });
 

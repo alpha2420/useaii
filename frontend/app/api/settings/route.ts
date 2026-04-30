@@ -41,7 +41,7 @@ export async function POST(req:NextRequest) {
 
                 // Check if it's Elite Structured format or raw text
                 const isElite = knowledge.includes("CATEGORY:") && knowledge.includes("Q:");
-                const chunks = isElite ? parseEliteChunks(knowledge) : chunkText(knowledge, 250).map(t => ({ text: t }));
+                const chunks = isElite ? parseEliteChunks(knowledge) : chunkText(knowledge, 300, 50).map(t => ({ text: t }));
 
                 const chunkDocs = await Promise.all(
                     chunks.map(async (item: any) => {

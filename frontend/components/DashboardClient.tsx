@@ -38,6 +38,8 @@ function DashboardClient({ ownerId, userName, userEmail }: { ownerId: string, us
 
     const [loading, setLoading] = useState(false)
     const [saved, setSaved] = useState(false)
+    const [cleaningUp, setCleaningUp] = useState(false)
+    const [cleanupMsg, setCleanupMsg] = useState<string | null>(null)
 
     // Upload state
     const [uploadingPdf, setUploadingPdf] = useState(false)
@@ -272,11 +274,30 @@ function DashboardClient({ ownerId, userName, userEmail }: { ownerId: string, us
     }
 
     const handleDismissQuestion = async (questionId: string) => {
+        // Optimistic update — remove from UI immediately regardless of DB state
+        setUnansweredQuestions(prev => prev.filter(q => q._id !== questionId))
         try {
             await axios.post("/api/unanswered-questions/delete", { questionId })
-            setUnansweredQuestions(prev => prev.filter(q => q._id !== questionId))
         } catch (err) {
-            console.error("Failed to dismiss question", err)
+            // Silently ignore DB quota errors — item is already removed from UI
+            console.warn("Could not delete from DB (possibly full), removed from UI only:", err)
+        }
+    }
+
+    const handleCleanup = async () => {
+        if (!confirm("This will delete old cached responses, usage logs, and trim long conversation histories to free up database storage. Continue?")) return
+        setCleaningUp(true)
+        setCleanupMsg(null)
+        try {
+            const res = await axios.post("/api/admin/cleanup", { ownerId })
+            setCleanupMsg(res.data.message || "Cleanup complete!")
+            setTimeout(() => setCleanupMsg(null), 8000)
+        } catch (err: any) {
+            const msg = err.response?.data?.message || "Cleanup failed. Try again."
+            setCleanupMsg(`❌ ${msg}`)
+            setTimeout(() => setCleanupMsg(null), 6000)
+        } finally {
+            setCleaningUp(false)
         }
     }
 
@@ -622,32 +643,59 @@ function DashboardClient({ ownerId, userName, userEmail }: { ownerId: string, us
                             </div>
                         </div>
 
-                        <div className='flex items-center justify-between'>
-                            <div className='flex items-center gap-5'>
-                                <motion.button
-                                    whileHover={{ scale: 1.03 }}
-                                    whileTap={{ scale: 0.97 }}
-                                    disabled={loading}
-                                    onClick={() => handleSettings()}
-                                    className="px-7 py-3 rounded-xl bg-black text-white text-sm font-medium hover:bg-zinc-800 transition disabled:opacity-60"
+                        <div className='space-y-3'>
+                            <div className='flex items-center justify-between'>
+                                <div className='flex items-center gap-5'>
+                                    <motion.button
+                                        whileHover={{ scale: 1.03 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        disabled={loading}
+                                        onClick={() => handleSettings()}
+                                        className="px-7 py-3 rounded-xl bg-black text-white text-sm font-medium hover:bg-zinc-800 transition disabled:opacity-60"
+                                    >
+                                        {loading ? "Saving..." : "Save Settings"}
+                                    </motion.button>
+                                    {saved && <motion.span
+                                        initial={{ opacity: 0, y: 6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-sm font-medium text-emerald-600"
+                                    >
+                                         ✓ Settings saved
+                                    </motion.span>}
+                                </div>
+
+                                <button
+                                    onClick={resetAllData}
+                                    className='text-xs font-bold text-red-500 hover:text-red-700 uppercase tracking-widest'
                                 >
-                                    {loading ? "Saving..." : "Save Settings"}
-                                </motion.button>
-                                {saved && <motion.span
-                                    initial={{ opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="text-sm font-medium text-emerald-600"
-                                >
-                                     ✓ Settings saved
-                                </motion.span>}
+                                    Reset All Data
+                                </button>
                             </div>
 
-                            <button
-                                onClick={resetAllData}
-                                className='text-xs font-bold text-red-500 hover:text-red-700 uppercase tracking-widest'
-                            >
-                                Reset All Data
-                            </button>
+                            {/* DB Storage Cleanup Banner */}
+                            <div className='flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl'>
+                                <span className='text-base'>⚠️</span>
+                                <div className='flex-1 min-w-0'>
+                                    <p className='text-xs font-semibold text-amber-800'>Database storage full?</p>
+                                    <p className='text-[11px] text-amber-600 leading-tight'>If Save Settings fails, free up space by clearing cached data.</p>
+                                    {cleanupMsg && (
+                                        <motion.p
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className={`text-[11px] font-semibold mt-1 ${cleanupMsg.startsWith('❌') ? 'text-red-600' : 'text-emerald-600'}`}
+                                        >
+                                            {cleanupMsg}
+                                        </motion.p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleCleanup}
+                                    disabled={cleaningUp}
+                                    className='flex-shrink-0 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition disabled:opacity-60'
+                                >
+                                    {cleaningUp ? 'Cleaning...' : '🗑 Free Up Space'}
+                                </button>
+                            </div>
                         </div>
 
                     </motion.div>

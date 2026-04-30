@@ -224,8 +224,17 @@ export async function POST(req: NextRequest) {
                     });
 
                     // 2. High-precision rerank and filter (BM25-lite + De-dupe)
-                    const refined = rankAndFilterChunks(cleanMessage, scored, 3);
+                    const refined = rankAndFilterChunks(cleanMessage, scored, 5);
                     console.log(`[RAG] Retrieved ${refined.length} chunks. Top score: ${scored[0]?.score.toFixed(3)}`);
+                    
+                    if (refined.length === 0) {
+                        console.log(`[RAG] No confident chunks found (score < 0.70). Skipping AI.`);
+                        const response = NextResponse.json("I'll connect you with our team shortly. Someone will respond within a few minutes! 🙏");
+                        response.headers.set("Access-Control-Allow-Origin", "*");
+                        response.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+                        response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+                        return response;
+                    }
                     
                     // ── 🚀 ZERO-LLM SELECTION LAYER ──
                     // If we have a near-perfect match (>0.90) for a Q&A unit, return answer directly
@@ -280,10 +289,11 @@ Use the provided INFO to answer the user's question.
 
 RULES:
 1. If you can answer using ONLY the INFO below, set "canAnswer": true.
-2. If the INFO does not contain the answer, set "canAnswer": false.
+2. If the INFO does not contain enough information to answer confidently, DO NOT guess. Instead set "canAnswer": false.
 3. Keep the reply short (max 20 words).
 4. Output ONLY JSON: {"canAnswer": boolean, "reply": "string"}
-
+5. Never make up information. Never repeat the same reply twice.
+${conversationMemory}
 INFO:
 ${KNOWLEDGE}
 
@@ -307,7 +317,7 @@ Q: ${cleanMessage}`;
                 console.log(`[Chat][${complexity}] Trying Gemini: ${modelName}`);
                 const model = genAI.getGenerativeModel({ 
                     model: modelName,
-                    generationConfig: { maxOutputTokens: maxTokens }
+                    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 }
                 });
                 
                 const geminiRes = await model.generateContent(prompt);
@@ -342,7 +352,7 @@ Q: ${cleanMessage}`;
 
                     // Human-like proactive fallback
                     if (!canAnswer || !reply || reply.includes('{"')) {
-                        reply = `That's a great question! I'll need to check the specific details on that for you. I'll get back to you in just a few minutes! 😊`;
+                        reply = `I'll connect you with our team shortly. Someone will respond within a few minutes! 🙏`;
                         canAnswer = false;
                     }
                     aiSuccess = true;
@@ -362,6 +372,7 @@ Q: ${cleanMessage}`;
                     messages: [{ role: "user", content: prompt }],
                     response_format: { type: "json_object" },
                     max_tokens: isComplex ? 250 : 120,
+                    temperature: 0.7,
                 });
                 const content = completion.choices[0].message.content;
                 if (content) {
@@ -369,7 +380,7 @@ Q: ${cleanMessage}`;
                     canAnswer = parsed.canAnswer !== false;
                     reply = parsed.reply || "";
                     if (!canAnswer || !reply || reply.includes('{"')) {
-                        reply = `That's a great question! I'll need to check the specific details on that for you. I'll get back to you in just a few minutes! 😊`;
+                        reply = `I'll connect you with our team shortly. Someone will respond within a few minutes! 🙏`;
                         canAnswer = false;
                     }
                     aiSuccess = true;
@@ -390,6 +401,7 @@ Q: ${cleanMessage}`;
                     messages: [{ role: "user", content: prompt }],
                     response_format: { type: "json_object" },
                     max_tokens: isComplex ? 250 : 120,
+                    temperature: 0.7,
                 });
                 const content = completion.choices[0].message.content;
                 if (content) {
@@ -397,7 +409,7 @@ Q: ${cleanMessage}`;
                     canAnswer = parsed.canAnswer !== false;
                     reply = parsed.reply || "";
                     if (!canAnswer || !reply || reply.includes('{"')) {
-                        reply = `That's a great question! I'll need to check the specific details on that for you. I'll get back to you in just a few minutes! 😊`;
+                        reply = `I'll connect you with our team shortly. Someone will respond within a few minutes! 🙏`;
                         canAnswer = false;
                     }
                     aiSuccess = true;
@@ -421,6 +433,7 @@ Q: ${cleanMessage}`;
                     messages: [{ role: "user", content: prompt }],
                     response_format: { type: "json_object" },
                     max_tokens: maxTokens,
+                    temperature: 0.7,
                 });
 
                 const content = completion.choices[0].message.content;
@@ -429,7 +442,7 @@ Q: ${cleanMessage}`;
                     canAnswer = parsed.canAnswer !== false;
                     reply = parsed.reply || "";
                     if (!canAnswer || !reply || reply.includes('{"')) {
-                        reply = `That's a great question! I'll need to check the specific details on that for you. I'll get back to you in just a few minutes! 😊`;
+                        reply = `I'll connect you with our team shortly. Someone will respond within a few minutes! 🙏`;
                         canAnswer = false;
                     }
                     aiSuccess = true;
