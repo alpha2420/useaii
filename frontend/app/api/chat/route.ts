@@ -317,7 +317,7 @@ Q: ${cleanMessage}`;
                 console.log(`[Chat][${complexity}] Trying Gemini: ${modelName}`);
                 const model = genAI.getGenerativeModel({ 
                     model: modelName,
-                    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 }
+                    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7, responseMimeType: "application/json" }
                 });
                 
                 const geminiRes = await model.generateContent(prompt);
@@ -346,8 +346,8 @@ Q: ${cleanMessage}`;
                         canAnswer = parsed.canAnswer !== false;
                         reply = parsed.reply || "";
                     } catch {
-                        canAnswer = true;
-                        reply = rawReply;
+                        canAnswer = false;
+                        reply = "";
                     }
 
                     // Human-like proactive fallback

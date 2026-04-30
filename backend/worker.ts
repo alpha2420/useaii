@@ -262,7 +262,7 @@ Q: ${cleanMessage}`;
                     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
                     const model = genAI.getGenerativeModel({ 
                         model: "gemini-2.0-flash",
-                        generationConfig: { maxOutputTokens: 120, temperature: 0.7 }
+                        generationConfig: { maxOutputTokens: 120, temperature: 0.7, responseMimeType: "application/json" }
                     });
 
                     const geminiRes = await model.generateContent(prompt);
