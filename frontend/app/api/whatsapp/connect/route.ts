@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, message: "WhatsApp connection initiated." });
 
     } catch (e: unknown) {
+        console.error("WhatsApp Connect Error:", e);
         return NextResponse.json({ error: (e as Error).message || "Failed to connect" }, { status: 500 });
     }
 }
