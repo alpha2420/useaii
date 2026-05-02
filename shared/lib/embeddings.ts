@@ -10,14 +10,14 @@ export async function getEmbedding(text: string): Promise<number[]> {
     }
     
     // Using v1beta as the models seem to be restricted to this version for this key
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${env.GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-005:embedContent?key=${env.GEMINI_API_KEY}`;
     
     try {
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                model: "models/text-embedding-004",
+                model: "models/text-embedding-005",
                 content: { parts: [{ text: text.replace(/\n/g, " ") }] },
                 outputDimensionality: 3072
             })
