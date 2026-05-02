@@ -1,2 +1,239 @@
 @import "tailwindcss";
 
+
+@theme {
+  --color-wa-bg: #EFEAE2;
+  --color-wa-header: #F0F2F5;
+  --color-wa-msgIn: #FFFFFF;
+  --color-wa-msgOut: #D9FDD3;
+  --color-wa-green: #00A884;
+}
+
+
+        body {
+            background: #FAFAFA;
+            color: #111827;
+            overflow-x: hidden;
+        }
+
+        .btn-primary {
+            background: #111827;
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: skewX(-20deg);
+            animation: btn-shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes btn-shimmer {
+            0% { left: -100%; }
+            20% { left: 200%; }
+            100% { left: 200%; }
+        }
+
+        .btn-primary:hover {
+            background: #374151;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .animate-spin-slow {
+            animation: spin 8s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .animate-marquee {
+            animation: marquee 35s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .animate-dash {
+            animation: dash 40s linear infinite;
+        }
+
+        @keyframes dash {
+            to { stroke-dashoffset: -1000; }
+        }
+
+        .btn-secondary {
+            background: #fff;
+            color: #111827;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border: 1px solid #E5E7EB;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #F9FAFB;
+        }
+
+        .wa-tail-in::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -8px;
+            border-style: solid;
+            border-width: 0 10px 10px 0;
+            border-color: transparent #fff transparent transparent;
+        }
+
+        .wa-tail-out::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -8px;
+            border-style: solid;
+            border-width: 10px 10px 0 0;
+            border-color: #D9FDD3 transparent transparent transparent;
+        }
+
+        .chat-bubble {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .chat-bubble.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes dotBounce {
+
+            0%,
+            100% {
+                opacity: .3;
+                transform: translateY(0)
+            }
+
+            50% {
+                opacity: 1;
+                transform: translateY(-3px)
+            }
+        }
+
+        .d1 {
+            animation: dotBounce 1.2s infinite
+        }
+
+        .d2 {
+            animation: dotBounce 1.2s infinite .15s
+        }
+
+        .d3 {
+            animation: dotBounce 1.2s infinite .3s
+        }
+
+        @keyframes float1 {
+
+            0%,
+            100% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-6px)
+            }
+        }
+
+        .fl1 {
+            animation: float1 4s ease-in-out infinite
+        }
+
+        .fl2 {
+            animation: float1 5s ease-in-out 1s infinite
+        }
+
+        .fl3 {
+            animation: float1 4.5s ease-in-out .5s infinite
+        }
+
+        .fl4 {
+            animation: float1 3.5s ease-in-out 1.5s infinite
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: .3
+            }
+
+            50% {
+                opacity: 1
+            }
+        }
+
+        .conn-pulse {
+            animation: pulse 2s ease-in-out infinite
+        }
+
+        .fl1 { animation: float1 4s ease-in-out infinite; }
+        .fl2 { animation: float2 5s ease-in-out infinite; }
+        .fl3 { animation: float3 3.5s ease-in-out infinite; }
+        @keyframes float1 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes float2 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes float3 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .animate-pipeline { animation: pipelineDot 2s ease-in-out infinite; }
+        .animate-pipeline2 { animation: pipelineDot 2s ease-in-out infinite 0.5s; }
+        .animate-pipeline3 { animation: pipelineDot 2s ease-in-out infinite 1s; }
+        @keyframes pipelineDot { 0% { left: 0; opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+
+        /* Background animations */
+        .bg-grid {
+            background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        @keyframes orbit1 {
+            0% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(60px, -40px) scale(1.1); }
+            50% { transform: translate(20px, -80px) scale(1); }
+            75% { transform: translate(-40px, -30px) scale(0.95); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+        @keyframes orbit2 {
+            0% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(-50px, 50px) scale(1.05); }
+            50% { transform: translate(-80px, 10px) scale(0.95); }
+            75% { transform: translate(-20px, -40px) scale(1.1); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+        @keyframes orbit3 {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(40px, 60px) scale(1.08); }
+            66% { transform: translate(-30px, 30px) scale(0.92); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+    

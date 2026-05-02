@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const envSchema = z.object({
-  MONGODB_URL: z.string().url(),
+  MONGODB_URL: z.string().min(1),
   GEMINI_API_KEY: z.string().min(1),
   OPENAI_API_KEY: z.string().min(1).optional(),
   GROK_API_KEY: z.string().min(1).optional(),
