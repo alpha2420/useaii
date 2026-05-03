@@ -386,14 +386,18 @@ export default function HomeClient({ email }: { email?: string }) {
                 actionJobIdx = (actionJobIdx + 1) % actionJobs.length;
                 const job = actionJobs[actionJobIdx];
                 
-                document.getElementById('action-msg').innerText = job.msg;
-                document.getElementById('action-intent').innerText = job.intent;
+                const msgEl = document.getElementById('action-msg');
+                const intentEl = document.getElementById('action-intent');
+                if (msgEl) msgEl.innerText = job.msg;
+                if (intentEl) intentEl.innerText = job.intent;
                 
                 const execEl = document.getElementById('action-exec');
-                const execIconBox = execEl.previousElementSibling;
+                const execIconBox = execEl?.previousElementSibling as HTMLElement | null;
                 
-                execEl.innerText = job.exec;
-                execEl.className = `text-[16px] font-extrabold ${job.color} tracking-tight`;
+                if (execEl) {
+                    execEl.innerText = job.exec;
+                    execEl.className = `text-[16px] font-extrabold ${job.color} tracking-tight`;
+                }
                 
                 if (execIconBox) {
                     execIconBox.className = `w-8 h-8 ${job.bgColor} rounded-full flex items-center justify-center ${job.color}`;
