@@ -227,7 +227,22 @@ async function startClient(ownerId: string) {
                 : "";
 
             // ── 5. Check Response Cache (skip AI if this question was asked before) ──
-            const cachedReply = await getCachedReply(ownerId, cleanMessage);
+            // Only use cache if the conversation is "fresh" (no prior messages in the last 15 mins)
+            let isFreshConversation = true;
+            if (existingConvo && existingConvo.messages && existingConvo.messages.length > 1) {
+                // The last message is the one we just received, so we check the one before it
+                const prevMsgTime = new Date(existingConvo.messages[existingConvo.messages.length - 2].timestamp).getTime();
+                const now = new Date().getTime();
+                if (now - prevMsgTime < 15 * 60 * 1000) { // 15 minutes
+                    isFreshConversation = false;
+                }
+            }
+
+            let cachedReply = null;
+            if (isFreshConversation) {
+                cachedReply = await getCachedReply(ownerId, cleanMessage);
+            }
+            
             if (cachedReply) {
                 await msg.reply(cachedReply);
                 // Still save the message to conversation history
